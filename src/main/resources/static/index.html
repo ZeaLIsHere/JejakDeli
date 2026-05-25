@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <meta name="description" content="Medan Heritage Trails - Jelajahi situs bersejarah kota Medan"/>
+    <title>JejakDeli</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+    <link rel="stylesheet" href="/css/style.css"/>
+</head>
+<body>
+
+<nav class="navbar">
+    <div class="nav-container">
+        <a class="nav-brand" href="#" onclick="showPage('beranda')">JejakDeli</a>
+        <ul class="nav-links">
+            <li><a href="#" class="nav-link active" data-page="beranda" onclick="showPage('beranda')">Beranda</a></li>
+            <li><a href="#" class="nav-link" data-page="situs" onclick="showPage('situs')">Situs</a></li>
+            <li><a href="#" class="nav-link" data-page="trail" onclick="showPage('trail')">Trail</a></li>
+            <li><a href="#" class="nav-link" data-page="riwayat" onclick="showPage('riwayat')">Riwayat</a></li>
+        </ul>
+    </div>
+</nav>
+
+<div class="app-container">
+
+    <!-- PAGE: BERANDA -->
+    <section id="page-beranda" class="page active">
+        <div class="hero">
+            <span class="brand-label">JejakDeli</span>
+            <h1>JejakDeli</h1>
+            <p>Jelajahi jejak sejarah kota Medan melalui situs-situs bersejarah yang penuh cerita dan makna.</p>
+            <div class="hero-stats">
+                <div class="hero-stat">
+                    <span class="hero-stat-value" id="heroTotalSites">0</span>
+                    <span class="hero-stat-label">Situs Bersejarah</span>
+                </div>
+                <div class="hero-stat">
+                    <span class="hero-stat-value" id="heroTotalTrails">0</span>
+                    <span class="hero-stat-label">Trail Tersedia</span>
+                </div>
+                <div class="hero-stat">
+                    <span class="hero-stat-value" id="heroVisited">0</span>
+                    <span class="hero-stat-label">Sudah Dikunjungi</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="map-section">
+            <h2 class="section-title">Peta Lokasi</h2>
+            <p class="section-subtitle">Lokasi situs bersejarah di kota Medan</p>
+            <div id="map"></div>
+        </div>
+
+        <div class="quick-links">
+            <div class="quick-card" onclick="showPage('situs')">
+                <h3>Jelajahi Situs</h3>
+                <p>Lihat daftar situs bersejarah dan mulai kunjungan</p>
+            </div>
+            <div class="quick-card" onclick="showPage('trail')">
+                <h3>Ikuti Trail</h3>
+                <p>Pilih rute yang sudah disiapkan untuk pengalaman terbaik</p>
+            </div>
+            <div class="quick-card" onclick="showPage('riwayat')">
+                <h3>Lihat Riwayat</h3>
+                <p>Cek daftar situs yang sudah Anda kunjungi</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- PAGE: SITUS -->
+    <section id="page-situs" class="page">
+        <div class="page-header">
+            <h1>Situs Bersejarah</h1>
+            <p>Pilih situs untuk memulai atau melanjutkan kunjungan Anda</p>
+        </div>
+        <div class="site-grid" id="siteGrid"></div>
+    </section>
+
+    <!-- PAGE: TRAIL -->
+    <section id="page-trail" class="page">
+        <div class="page-header">
+            <h1>Trail Tersedia</h1>
+            <p>Ikuti rute yang sudah disiapkan untuk menjelajahi situs bersejarah secara berurutan</p>
+        </div>
+        <div class="trail-grid" id="trailList"></div>
+    </section>
+
+    <!-- PAGE: RIWAYAT -->
+    <section id="page-riwayat" class="page">
+        <div class="page-header">
+            <h1>Riwayat Kunjungan</h1>
+            <p>Daftar situs yang sudah Anda kunjungi</p>
+        </div>
+
+        <div class="riwayat-layout">
+            <div class="explorer-card">
+                <div class="explorer-card-header">
+                    <div class="explorer-avatar">E</div>
+                    <div>
+                        <h3 id="explorerName">Default Explorer</h3>
+                        <span>Lokasi saat ini: <strong id="currentLocation">Belum ada</strong></span>
+                    </div>
+                </div>
+                <div class="explorer-card-stats">
+                    <div class="stat-item">
+                        <span class="stat-value" id="visitedCount">0</span>
+                        <span class="stat-label">Dikunjungi</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-value" id="totalSites">0</span>
+                        <span class="stat-label">Total Situs</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-value" id="badgeCount">0</span>
+                        <span class="stat-label">Badge</span>
+                    </div>
+                </div>
+                <button class="btn-reset" onclick="resetExplorer()">Reset Semua Kunjungan</button>
+            </div>
+
+            <div class="riwayat-right">
+                <div class="badges-card">
+                    <h3>Penghargaan (Badge)</h3>
+                    <div class="badges-grid" id="badgesGrid">
+                        <div class="history-empty">Selesaikan trail untuk mendapatkan badge</div>
+                    </div>
+                </div>
+
+                <div class="history-card">
+                    <h3>Urutan Kunjungan</h3>
+                    <ul class="history-list" id="historyList">
+                        <div class="history-empty">Belum ada situs yang dikunjungi</div>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <footer>
+        <p>JejakDeli - Sistem Penjelajahan Situs Bersejarah Kota Medan</p>
+    </footer>
+
+</div>
+
+<div class="toast-container" id="toastContainer"></div>
+
+<div class="modal-overlay" id="modalOverlay" onclick="closeModal()">
+    <div class="modal" onclick="event.stopPropagation()">
+        <h3 id="modalTitle">Trail Result</h3>
+        <p class="modal-subtitle" id="modalSubtitle">Detail hasil trail</p>
+        <div id="modalBody"></div>
+        <button class="btn-close-modal" onclick="closeModal()">Tutup</button>
+    </div>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="/js/app.js"></script>
+</body>
+</html>
