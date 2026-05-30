@@ -1,12 +1,22 @@
 package com.medanheritage.model;
 
+import jakarta.persistence.*;
 import java.util.ArrayList;
 import java.util.List;
 
+@Entity
 public class Trail {
 
+    @Id
     private String id;
     private String name;
+
+    @ManyToMany(fetch = FetchType.EAGER)
+    @JoinTable(
+        name = "trail_route_sites",
+        joinColumns = @JoinColumn(name = "trail_id"),
+        inverseJoinColumns = @JoinColumn(name = "site_id")
+    )
     private List<HeritageSite> route;
 
     public Trail() {

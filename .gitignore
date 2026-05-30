@@ -6,3 +6,5 @@
 *.ipr
 .vscode/
 *.log
+data/
+*.db

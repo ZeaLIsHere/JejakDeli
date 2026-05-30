@@ -10,7 +10,8 @@
 </head>
 <body>
 
-<nav class="navbar">
+<!-- MAIN NAVBAR (Hidden by default, shown after login) -->
+<nav class="navbar" id="appNavbar" style="display:none;">
     <div class="nav-container">
         <a class="nav-brand" href="#" onclick="showPage('beranda')">JejakDeli</a>
         <ul class="nav-links">
@@ -18,11 +19,52 @@
             <li><a href="#" class="nav-link" data-page="situs" onclick="showPage('situs')">Situs</a></li>
             <li><a href="#" class="nav-link" data-page="trail" onclick="showPage('trail')">Trail</a></li>
             <li><a href="#" class="nav-link" data-page="riwayat" onclick="showPage('riwayat')">Riwayat</a></li>
+            <li><a href="#" class="nav-link logout-link" onclick="handleLogout()" style="color: var(--red); font-weight: 600;">Keluar</a></li>
         </ul>
     </div>
 </nav>
 
-<div class="app-container">
+<!-- PAGE: AUTH (Shown by default, hidden after login) -->
+<div class="auth-wrapper" id="page-auth">
+    <div class="auth-container">
+        <div class="auth-header">
+            <span class="brand-label">JejakDeli</span>
+            <h1 id="authTitle">Masuk ke JejakDeli</h1>
+            <p id="authSubtitle">Masuk untuk memulai petualangan sejarah Anda di kota Medan</p>
+        </div>
+        
+        <!-- Form Login -->
+        <form id="loginForm" onsubmit="submitLogin(event)">
+            <div class="form-group">
+                <label for="loginUsername">Username</label>
+                <input type="text" id="loginUsername" required placeholder="Masukkan username Anda..."/>
+            </div>
+            <div class="form-group">
+                <label for="loginPassword">Password</label>
+                <input type="password" id="loginPassword" required placeholder="Masukkan password Anda..."/>
+            </div>
+            <button type="submit" class="btn-auth-submit">Masuk</button>
+            <p class="auth-toggle">Belum punya akun? <a href="#" onclick="toggleAuthForm(true)">Daftar Sekarang</a></p>
+        </form>
+
+        <!-- Form Register -->
+        <form id="registerForm" onsubmit="submitRegister(event)" style="display: none;">
+            <div class="form-group">
+                <label for="registerUsername">Username Baru</label>
+                <input type="text" id="registerUsername" required placeholder="Pilih username unik..."/>
+            </div>
+            <div class="form-group">
+                <label for="registerPassword">Password Baru</label>
+                <input type="password" id="registerPassword" required placeholder="Pilih password kuat..."/>
+            </div>
+            <button type="submit" class="btn-auth-submit" style="background-color: var(--teal);">Daftar</button>
+            <p class="auth-toggle">Sudah punya akun? <a href="#" onclick="toggleAuthForm(false)">Masuk</a></p>
+        </form>
+    </div>
+</div>
+
+<!-- MAIN APP CONTAINER (Hidden by default, shown after login) -->
+<div class="app-container" id="appMainContent" style="display:none;">
 
     <!-- PAGE: BERANDA -->
     <section id="page-beranda" class="page active">
@@ -74,6 +116,21 @@
             <h1>Situs Bersejarah</h1>
             <p>Pilih situs untuk memulai atau melanjutkan kunjungan Anda</p>
         </div>
+
+        <!-- Filter & Search Bar -->
+        <div class="filter-bar">
+            <input type="text" id="searchSite" placeholder="Cari nama situs atau deskripsi..." oninput="filterSites()"/>
+            <select id="filterCategory" onchange="filterSites()">
+                <option value="all">Semua Kategori</option>
+                <option value="Cagar Budaya">Cagar Budaya</option>
+                <option value="Museum">Museum</option>
+                <option value="Bangunan Bersejarah">Bangunan Bersejarah</option>
+                <option value="Infrastruktur Bersejarah">Infrastruktur Bersejarah</option>
+                <option value="Tempat Ibadah Bersejarah">Tempat Ibadah Bersejarah</option>
+                <option value="Taman Bersejarah">Taman Bersejarah</option>
+            </select>
+        </div>
+
         <div class="site-grid" id="siteGrid"></div>
     </section>
 
@@ -96,12 +153,25 @@
         <div class="riwayat-layout">
             <div class="explorer-card">
                 <div class="explorer-card-header">
-                    <div class="explorer-avatar">E</div>
+                    <div class="explorer-avatar" id="explorerAvatar">E</div>
                     <div>
                         <h3 id="explorerName">Default Explorer</h3>
-                        <span>Lokasi saat ini: <strong id="currentLocation">Belum ada</strong></span>
+                        <span>Gelar: <strong id="explorerTitle">Turis Pemula</strong></span>
+                        <div class="current-location-text">Lokasi saat ini: <strong id="currentLocation">Belum ada</strong></div>
                     </div>
                 </div>
+
+                <!-- Level & XP Section -->
+                <div class="explorer-level-info">
+                    <div class="level-header">
+                        <span class="level-label">LEVEL <strong id="explorerLevel">1</strong></span>
+                        <span class="xp-text"><strong id="explorerXp">0</strong> / 300 XP</span>
+                    </div>
+                    <div class="xp-progress-container">
+                        <div class="xp-progress-bar" id="xpProgressBar" style="width: 0%"></div>
+                    </div>
+                </div>
+
                 <div class="explorer-card-stats">
                     <div class="stat-item">
                         <span class="stat-value" id="visitedCount">0</span>
@@ -145,12 +215,76 @@
 
 <div class="toast-container" id="toastContainer"></div>
 
+<!-- MODAL TRAIL RESULT -->
 <div class="modal-overlay" id="modalOverlay" onclick="closeModal()">
     <div class="modal" onclick="event.stopPropagation()">
         <h3 id="modalTitle">Trail Result</h3>
         <p class="modal-subtitle" id="modalSubtitle">Detail hasil trail</p>
         <div id="modalBody"></div>
         <button class="btn-close-modal" onclick="closeModal()">Tutup</button>
+    </div>
+</div>
+
+<!-- MODAL KUIS -->
+<div class="modal-overlay" id="quizModalOverlay" onclick="closeQuizModal()">
+    <div class="modal" onclick="event.stopPropagation()">
+        <h3>Kuis Sejarah</h3>
+        <p class="modal-subtitle" id="quizSiteName">Nama Situs</p>
+        <hr style="border-color:var(--border); margin: 12px 0;"/>
+        <div class="quiz-container">
+            <p class="quiz-question" id="quizQuestionText">Pertanyaan kuis...</p>
+            <div class="quiz-options">
+                <button class="btn-quiz-option" id="optionA" onclick="submitQuizAnswer('A')">A. ...</button>
+                <button class="btn-quiz-option" id="optionB" onclick="submitQuizAnswer('B')">B. ...</button>
+                <button class="btn-quiz-option" id="optionC" onclick="submitQuizAnswer('C')">C. ...</button>
+                <button class="btn-quiz-option" id="optionD" onclick="submitQuizAnswer('D')">D. ...</button>
+            </div>
+        </div>
+        <button class="btn-close-modal" onclick="closeQuizModal()" style="margin-top: 15px; width: 100%;">Batal</button>
+    </div>
+</div>
+
+<!-- MODAL DETAIL SITUS & ULASAN -->
+<div class="modal-overlay" id="siteDetailModalOverlay" onclick="closeSiteDetailModal()">
+    <div class="modal" onclick="event.stopPropagation()" style="max-width: 550px;">
+        <h2 id="detailSiteName">Nama Situs</h2>
+        <div style="display:flex; justify-content:space-between; align-items:center; margin: 8px 0 12px;">
+            <span class="site-id" id="detailSiteId">S01</span>
+            <span class="site-era" id="detailSiteEra" style="color:var(--teal); font-weight:600; font-size:13px;">Era</span>
+        </div>
+        <p class="detail-description" id="detailSiteDesc" style="font-size:14px; line-height:1.6; margin-bottom:20px; color:var(--text-mid);"></p>
+        
+        <hr style="border-color:var(--border); margin: 20px 0 15px;"/>
+        
+        <div class="reviews-section">
+            <h3 style="font-size:16px; font-weight:600; margin-bottom:12px;">Ulasan & Catatan Perjalanan</h3>
+            
+            <!-- Form Ulasan -->
+            <div id="reviewFormContainer" style="margin-bottom:18px; padding:15px; border:1px solid var(--border); border-radius:8px; background-color:var(--off-white);">
+                <h4 style="font-size:13px; font-weight:600; margin-bottom:10px;">Tulis Catatan Perjalanan Anda</h4>
+                <div style="display:flex; align-items:center; gap:8px; margin-bottom:10px;">
+                    <label style="font-size:12px; color:var(--text-mid);">Rating: </label>
+                    <select id="newReviewRating" style="padding:4px 8px; border-radius:4px; border:1px solid var(--border); font-size:12px;">
+                        <option value="5">⭐⭐⭐⭐⭐ (5/5)</option>
+                        <option value="4">⭐⭐⭐⭐ (4/5)</option>
+                        <option value="3">⭐⭐⭐ (3/5)</option>
+                        <option value="2">⭐⭐ (2/5)</option>
+                        <option value="1">⭐ (1/5)</option>
+                    </select>
+                </div>
+                <div style="margin-bottom:10px;">
+                    <textarea id="newReviewComment" placeholder="Tulis cerita atau pengalaman menarik Anda mengunjungi situs ini..." rows="3" style="width:100%; padding:8px; border-radius:6px; border:1px solid var(--border); font-family:inherit; font-size:12px; resize:none;"></textarea>
+                </div>
+                <button class="btn-visit" onclick="submitReview()" style="padding:6px 15px; font-size:12px;">Kirim Ulasan</button>
+            </div>
+            
+            <!-- List Ulasan -->
+            <div class="reviews-list" id="detailReviewsList" style="max-height: 180px; overflow-y: auto; display:flex; flex-direction:column; gap:8px;">
+                <div class="history-empty">Belum ada ulasan untuk situs ini.</div>
+            </div>
+        </div>
+        
+        <button class="btn-close-modal" onclick="closeSiteDetailModal()" style="margin-top:20px; width: 100%;">Tutup</button>
     </div>
 </div>
 

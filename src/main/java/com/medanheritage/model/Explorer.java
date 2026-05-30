@@ -1,42 +1,86 @@
 package com.medanheritage.model;
 
+import jakarta.persistence.*;
 import java.util.ArrayList;
 import java.util.List;
 
+@Entity
 public class Explorer {
 
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @Column(unique = true)
+    private String username;
+    
+    @com.fasterxml.jackson.annotation.JsonIgnore
+    private String password;
+    
     private String name;
+
+    @ManyToOne
+    @com.fasterxml.jackson.annotation.JsonIgnore
     private HeritageSite currentLocation;
+
+    @ManyToMany(fetch = FetchType.EAGER)
+    @JoinTable(
+        name = "explorer_visited_sites",
+        joinColumns = @JoinColumn(name = "explorer_id"),
+        inverseJoinColumns = @JoinColumn(name = "site_id")
+    )
+    @com.fasterxml.jackson.annotation.JsonIgnore
     private List<HeritageSite> visitedSites;
+
+    @ManyToMany(fetch = FetchType.EAGER)
+    @JoinTable(
+        name = "explorer_earned_badges",
+        joinColumns = @JoinColumn(name = "explorer_id"),
+        inverseJoinColumns = @JoinColumn(name = "badge_id")
+    )
+    @com.fasterxml.jackson.annotation.JsonIgnore
     private List<Badge> earnedBadges;
+
+    private int xp;
+    private int level = 1;
 
     public Explorer() {
         this.visitedSites = new ArrayList<>();
         this.earnedBadges = new ArrayList<>();
     }
 
-    public Explorer(String name) {
-        this.name = name;
+    public Explorer(String username, String password) {
+        this.username = username;
+        this.password = password;
+        this.name = username;
         this.visitedSites = new ArrayList<>();
         this.earnedBadges = new ArrayList<>();
+        this.xp = 0;
+        this.level = 1;
     }
 
-    public boolean hasVisited(String siteId) {
-        for (HeritageSite site : visitedSites) {
-            if (site.getId().equals(siteId)) {
-                return true;
-            }
-        }
-        return false;
+    public Long getId() {
+        return id;
     }
 
-    public boolean visit(HeritageSite site) {
-        if (hasVisited(site.getId())) {
-            return false;
-        }
-        this.currentLocation = site;
-        this.visitedSites.add(site);
-        return true;
+    public void setId(Long id) {
+        this.id = id;
+    }
+
+    public String getUsername() {
+        return username;
+    }
+
+    public void setUsername(String username) {
+        this.username = username;
+    }
+
+    public String getPassword() {
+        return password;
+    }
+
+    public void setPassword(String password) {
+        this.password = password;
     }
 
     public String getName() {
@@ -67,6 +111,58 @@ public class Explorer {
         return earnedBadges;
     }
 
+    public void setEarnedBadges(List<Badge> earnedBadges) {
+        this.earnedBadges = earnedBadges;
+    }
+
+    public int getXp() {
+        return xp;
+    }
+
+    public void setXp(int xp) {
+        this.xp = xp;
+    }
+
+    public int getLevel() {
+        return level;
+    }
+
+    public void setLevel(int level) {
+        this.level = level;
+    }
+
+    public boolean addXp(int amount) {
+        this.xp += amount;
+        int newLevel = 1 + (this.xp / 300);
+        if (newLevel > this.level) {
+            this.level = newLevel;
+            return true; // Leveled up
+        }
+        return false;
+    }
+
+    public boolean hasVisited(String siteId) {
+        if (visitedSites == null) return false;
+        for (HeritageSite site : visitedSites) {
+            if (site.getId().equals(siteId)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    public boolean visit(HeritageSite site) {
+        if (visitedSites == null) {
+            visitedSites = new ArrayList<>();
+        }
+        if (hasVisited(site.getId())) {
+            return false;
+        }
+        this.currentLocation = site;
+        this.visitedSites.add(site);
+        return true;
+    }
+
     public boolean hasBadge(String badgeId) {
         for (Badge b : earnedBadges) {
             if (b.getId().equals(badgeId)) {
@@ -86,5 +182,7 @@ public class Explorer {
         this.currentLocation = null;
         this.visitedSites.clear();
         this.earnedBadges.clear();
+        this.xp = 0;
+        this.level = 1;
     }
 }

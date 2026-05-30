@@ -1,11 +1,16 @@
 package com.medanheritage.model;
 
+import jakarta.persistence.MappedSuperclass;
+
+@MappedSuperclass
 public class Location {
 
+    @jakarta.persistence.Id
     private String id;
     private String name;
     private double latitude;
     private double longitude;
+    @jakarta.persistence.Column(length = 1000)
     private String description;
 
     public Location() {

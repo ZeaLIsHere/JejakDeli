@@ -1,0 +1,211 @@
+{
+  "sites": [
+    {
+      "id": "S01",
+      "name": "Istana Maimun",
+      "latitude": 3.5753,
+      "longitude": 98.6837,
+      "description": "Istana Maimun adalah istana Kesultanan Deli yang dibangun pada tahun 1888 oleh Sultan Ma'mun Al Rashid Perkasa Alam. Istana ini merupakan salah satu ikon kota Medan dan menjadi saksi sejarah kejayaan Kesultanan Melayu Deli.",
+      "era": "Kesultanan Deli (1888)",
+      "status": "Cagar Budaya",
+      "quiz": {
+        "questionText": "Siapakah Sultan Deli yang membangun Istana Maimun?",
+        "optionA": "Sultan Ma'mun Al Rashid Perkasa Alam",
+        "optionB": "Sultan Amaluddin Mangendar",
+        "optionC": "Sultan Akhmad Perkasa Alamsyah",
+        "optionD": "Sultan Ottoman Deli",
+        "correctOption": "A"
+      }
+    },
+    {
+      "id": "S02",
+      "name": "Masjid Raya Al-Mashun",
+      "latitude": 3.5747,
+      "longitude": 98.6833,
+      "description": "Masjid Raya Al-Mashun dibangun pada tahun 1906 atas perintah Sultan Ma'mun Al Rashid. Arsitekturnya memadukan gaya Timur Tengah, India, dan Spanyol, menjadikannya salah satu masjid terindah di Indonesia.",
+      "era": "Kesultanan Deli (1906)",
+      "status": "Cagar Budaya",
+      "quiz": {
+        "questionText": "Gaya arsitektur apa saja yang dipadukan pada Masjid Raya Al-Mashun?",
+        "optionA": "Timur Tengah, India, dan Spanyol",
+        "optionB": "Cina, Eropa, dan Melayu",
+        "optionC": "Modern Minimalis dan Gotik",
+        "optionD": "Jawa Kuno dan Yunani",
+        "correctOption": "A"
+      }
+    },
+    {
+      "id": "S03",
+      "name": "Tjong A Fie Mansion",
+      "latitude": 3.5894,
+      "longitude": 98.6831,
+      "description": "Tjong A Fie Mansion adalah rumah peninggalan Tjong A Fie, seorang dermawan dan tokoh Tionghoa berpengaruh di Medan pada awal abad ke-20. Bangunan bergaya Tiongkok-Eropa ini kini menjadi museum.",
+      "era": "Kolonial (awal abad ke-20)",
+      "status": "Museum",
+      "quiz": {
+        "questionText": "Siapakah Tjong A Fie?",
+        "optionA": "Seorang walikota pertama Medan",
+        "optionB": "Seorang dermawan dan tokoh Tionghoa berpengaruh di Medan",
+        "optionC": "Arsitek asal Belanda",
+        "optionD": "Gubernur Sumatera Utara pertama",
+        "correctOption": "B"
+      }
+    },
+    {
+      "id": "S04",
+      "name": "Kantor Pos Medan",
+      "latitude": 3.5880,
+      "longitude": 98.6790,
+      "description": "Kantor Pos Medan adalah bangunan bersejarah bergaya arsitektur kolonial Belanda yang dibangun pada masa Hindia Belanda. Hingga kini masih berfungsi sebagai kantor pos.",
+      "era": "Kolonial Belanda",
+      "status": "Bangunan Bersejarah",
+      "quiz": {
+        "questionText": "Kantor Pos Medan merupakan bangunan bersejarah bergaya arsitektur apa?",
+        "optionA": "Gotik Perancis",
+        "optionB": "Kolonial Belanda (Art Deco/Modern)",
+        "optionC": "Tradisional Melayu",
+        "optionD": "Kubah Kubisme",
+        "correctOption": "B"
+      }
+    },
+    {
+      "id": "S05",
+      "name": "Balai Kota Lama",
+      "latitude": 3.5890,
+      "longitude": 98.6800,
+      "description": "Balai Kota Lama Medan merupakan gedung peninggalan pemerintahan kolonial Belanda. Bangunan ini menjadi simbol pemerintahan kota Medan pada masa lampau dengan arsitektur Eropa klasik.",
+      "era": "Kolonial Belanda",
+      "status": "Bangunan Bersejarah",
+      "quiz": {
+        "questionText": "Balai Kota Lama Medan dahulu digunakan sebagai pusat pemerintahan dari...",
+        "optionA": "Kesultanan Deli",
+        "optionB": "Gemeente (Kota Praja) Medan",
+        "optionC": "Kerajaan Haru",
+        "optionD": "Garnisun Militer Jepang",
+        "correctOption": "B"
+      }
+    },
+    {
+      "id": "S06",
+      "name": "Gedung London Sumatra",
+      "latitude": 3.5900,
+      "longitude": 98.6780,
+      "description": "Gedung London Sumatra (Lonsum) merupakan kantor pusat perusahaan perkebunan Inggris yang didirikan pada masa kolonial. Bangunan megah ini menjadi saksi sejarah industri perkebunan di Sumatera Utara.",
+      "era": "Kolonial Belanda (1906)",
+      "status": "Bangunan Bersejarah",
+      "quiz": {
+        "questionText": "Tahun berapakah Gedung London Sumatra (Lonsum) didirikan?",
+        "optionA": "1945",
+        "optionB": "1906",
+        "optionC": "1888",
+        "optionD": "1924",
+        "correctOption": "B"
+      }
+    },
+    {
+      "id": "S07",
+      "name": "Stasiun Kereta Api Medan",
+      "latitude": 3.5870,
+      "longitude": 98.6830,
+      "description": "Stasiun Kereta Api Medan atau Stasiun Besar Medan dibangun pada era kolonial Belanda sebagai simpul transportasi utama. Arsitekturnya bergaya Art Deco yang masih terjaga hingga kini.",
+      "era": "Kolonial Belanda (1886)",
+      "status": "Infrastruktur Bersejarah",
+      "quiz": {
+        "questionText": "Rute kereta api pertama dari Stasiun Medan yang diresmikan tahun 1886 menghubungkan kota Medan dengan...",
+        "optionA": "Binjai",
+        "optionB": "Belawan",
+        "optionC": "Deli Serdang",
+        "optionD": "Tanjung Balai",
+        "correctOption": "B"
+      }
+    },
+    {
+      "id": "S08",
+      "name": "Kuil Shri Mariamman",
+      "latitude": 3.5890,
+      "longitude": 98.6845,
+      "description": "Kuil Shri Mariamman adalah kuil Hindu tertua di kota Medan yang dibangun pada tahun 1884. Kuil ini menampilkan arsitektur Dravidian khas India Selatan dengan gopuram yang berwarna-warni.",
+      "era": "Era Kolonial (1884)",
+      "status": "Tempat Ibadah Bersejarah",
+      "quiz": {
+        "questionText": "Kuil Hindu Shri Mariamman didekasikan untuk memuja dewi...",
+        "optionA": "Dewi Mariamman (Dewi Parwati/Durga)",
+        "optionB": "Dewi Saraswati",
+        "optionC": "Dewi Laksmi",
+        "optionD": "Dewa Ganesha",
+        "correctOption": "A"
+      }
+    },
+    {
+      "id": "S09",
+      "name": "Taman Sri Deli",
+      "latitude": 3.5760,
+      "longitude": 98.6830,
+      "description": "Taman Sri Deli merupakan taman bersejarah yang terletak di depan Istana Maimun. Taman ini menjadi ruang terbuka publik yang menyimpan memori sejarah Kesultanan Deli dan kehidupan masyarakat Medan tempo dulu.",
+      "era": "Kesultanan Deli",
+      "status": "Taman Bersejarah",
+      "quiz": {
+        "questionText": "Taman Sri Deli dibangun sebagai tempat bersantai bagi...",
+        "optionA": "Keluarga Kesultanan Deli",
+        "optionB": "Para tentara kolonial Belanda",
+        "optionC": "Masyarakat umum kelas pekerja",
+        "optionD": "Pedagang rempah-rempah dari India",
+        "correctOption": "A"
+      }
+    },
+    {
+      "id": "S10",
+      "name": "Gedung Bank Indonesia Medan",
+      "latitude": 3.5885,
+      "longitude": 98.6775,
+      "description": "Gedung Bank Indonesia Medan dulunya merupakan kantor De Javasche Bank yang dibangun pada tahun 1909. Bangunan bergaya neoklasik Eropa ini menjadi salah satu landmark arsitektur kolonial di pusat kota Medan.",
+      "era": "Kolonial Belanda (1909)",
+      "status": "Bangunan Bersejarah",
+      "quiz": {
+        "questionText": "Sebelum menjadi Bank Indonesia, gedung kolonial ini dulunya merupakan kantor...",
+        "optionA": "De Javasche Bank",
+        "optionB": "Nederlandsche Handel-Maatschappij",
+        "optionC": "Chartered Bank of India",
+        "optionD": "Escompto Bank",
+        "correctOption": "A"
+      }
+    }
+  ],
+  "badges": [
+    {
+      "id": "B01",
+      "name": "Penjelajah Kesultanan",
+      "trailId": "T01",
+      "description": "Menyelesaikan Trail Jejak Kesultanan Deli"
+    },
+    {
+      "id": "B02",
+      "name": "Penjelajah Kolonial",
+      "trailId": "T02",
+      "description": "Menyelesaikan Trail Jejak Kolonial Medan"
+    },
+    {
+      "id": "B03",
+      "name": "Penjelajah Multikultur",
+      "trailId": "T03",
+      "description": "Menyelesaikan Trail Jejak Multikultur Medan"
+    }
+  ],
+  "trails": [
+    {
+      "id": "T01",
+      "name": "Jejak Kesultanan Deli",
+      "routeSiteIds": ["S01", "S02", "S09"]
+    },
+    {
+      "id": "T02",
+      "name": "Jejak Kolonial Medan",
+      "routeSiteIds": ["S04", "S05", "S03", "S06", "S10"]
+    },
+    {
+      "id": "T03",
+      "name": "Jejak Multikultur Medan",
+      "routeSiteIds": ["S08", "S03", "S07"]
+    }
+  ]
+}

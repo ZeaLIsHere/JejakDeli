@@ -904,3 +904,262 @@ footer p {
     .nav-links { gap: 0; }
     .nav-link { padding: 8px 12px; font-size: 13px; }
 }
+
+/* ========== FILTER BAR ========== */
+.filter-bar {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 20px;
+    background-color: var(--white);
+    padding: 14px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    box-shadow: var(--shadow);
+}
+
+.filter-bar input[type="text"] {
+    flex: 1;
+    padding: 8px 14px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    font-size: 14px;
+    font-family: inherit;
+    outline: none;
+    transition: border-color 0.2s;
+}
+
+.filter-bar input[type="text"]:focus {
+    border-color: var(--yellow);
+}
+
+.filter-bar select {
+    padding: 8px 14px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    font-size: 14px;
+    font-family: inherit;
+    outline: none;
+    background-color: var(--white);
+    cursor: pointer;
+}
+
+/* ========== LEVEL & XP BAR ========== */
+.explorer-level-info {
+    margin-bottom: 16px;
+    padding: 10px 0;
+}
+
+.level-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 6px;
+    font-size: 13px;
+}
+
+.level-label {
+    font-weight: 700;
+    color: var(--text-dark);
+}
+
+.xp-progress-container {
+    width: 100%;
+    height: 10px;
+    background-color: var(--light-gray);
+    border-radius: 100px;
+    overflow: hidden;
+    border: 1px solid rgba(0,0,0,0.05);
+}
+
+.xp-progress-bar {
+    height: 100%;
+    background: linear-gradient(90deg, var(--yellow), #ffa726);
+    border-radius: 100px;
+    transition: width 0.4s ease;
+}
+
+.current-location-text {
+    font-size: 11px;
+    color: var(--text-mid);
+    margin-top: 4px;
+}
+
+/* ========== KUIS SYSTEM ========== */
+.quiz-question {
+    font-size: 15px;
+    font-weight: 500;
+    margin-bottom: 16px;
+    color: var(--text-dark);
+}
+
+.quiz-options {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.btn-quiz-option {
+    background-color: var(--white);
+    border: 1px solid var(--border);
+    color: var(--text-dark);
+    padding: 12px 16px;
+    border-radius: 6px;
+    font-size: 13px;
+    text-align: left;
+    cursor: pointer;
+    font-family: inherit;
+    transition: all 0.2s;
+    width: 100%;
+}
+
+.btn-quiz-option:hover {
+    background-color: var(--yellow-light);
+    border-color: var(--yellow);
+    font-weight: 500;
+}
+
+/* ========== REVIEWS SYSTEM ========== */
+.review-item {
+    padding: 10px 12px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    background-color: var(--white);
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.review-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.review-author {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-dark);
+}
+
+.review-date {
+    font-size: 10px;
+    color: var(--text-light);
+}
+
+.review-comment {
+    font-size: 12px;
+    color: var(--text-mid);
+    line-height: 1.4;
+}
+
+.review-stars {
+    color: var(--yellow);
+    font-size: 11px;
+}
+
+/* ========== AUTH SCREEN (LOGIN & REGISTER) ========== */
+.auth-wrapper {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    background-color: var(--off-white);
+    padding: 20px;
+}
+
+.auth-container {
+    background-color: var(--white);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 36px;
+    width: 100%;
+    max-width: 420px;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+}
+
+.auth-header {
+    text-align: center;
+    margin-bottom: 28px;
+}
+
+.auth-header h1 {
+    font-size: 22px;
+    font-weight: 700;
+    margin-top: 10px;
+    margin-bottom: 6px;
+}
+
+.auth-header p {
+    font-size: 13px;
+    color: var(--text-mid);
+    font-weight: 300;
+}
+
+.form-group {
+    margin-bottom: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.form-group label {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-dark);
+}
+
+.form-group input {
+    padding: 10px 14px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    font-size: 13px;
+    font-family: inherit;
+    outline: none;
+    transition: border-color 0.2s;
+}
+
+.form-group input:focus {
+    border-color: var(--yellow);
+}
+
+.btn-auth-submit {
+    width: 100%;
+    background-color: var(--yellow);
+    color: var(--white);
+    border: none;
+    padding: 11px;
+    border-radius: 6px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    font-family: inherit;
+    transition: background-color 0.2s;
+    margin-top: 10px;
+}
+
+.btn-auth-submit:hover {
+    background-color: var(--yellow-hover);
+}
+
+.auth-toggle {
+    text-align: center;
+    font-size: 12px;
+    color: var(--text-mid);
+    margin-top: 16px;
+}
+
+.auth-toggle a {
+    color: var(--yellow-hover);
+    text-decoration: none;
+    font-weight: 600;
+}
+
+.auth-toggle a:hover {
+    text-decoration: underline;
+}
+
+.logout-link {
+    cursor: pointer;
+}
+
+

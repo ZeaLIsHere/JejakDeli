@@ -1,7 +1,12 @@
 package com.medanheritage.model;
 
+import jakarta.persistence.Entity;
+import jakarta.persistence.Id;
+
+@Entity
 public class Badge {
 
+    @Id
     private String id;
     private String name;
     private String trailId;
