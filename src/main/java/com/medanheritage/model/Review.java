@@ -4,6 +4,7 @@ import jakarta.persistence.*;
 import java.time.LocalDateTime;
 
 @Entity
+@Table(name = "ulasan")
 public class Review {
 
     @Id
@@ -13,7 +14,7 @@ public class Review {
     private String siteId;
     
     @ManyToOne
-    @JoinColumn(name = "explorer_id")
+    @JoinColumn(name = "user_id")
     private Explorer explorer;
     
     private int rating;

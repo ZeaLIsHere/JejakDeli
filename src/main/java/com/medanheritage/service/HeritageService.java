@@ -122,6 +122,24 @@ public class HeritageService {
         return explorerRepository.findById(id).orElse(null);
     }
 
+    public Map<String, Object> addXp(Long explorerId, int amount) {
+        Map<String, Object> result = new LinkedHashMap<>();
+        Explorer explorer = getExplorerById(explorerId);
+        if (explorer != null) {
+            boolean leveledUp = explorer.addXp(amount);
+            explorerRepository.save(explorer);
+            result.put("success", true);
+            result.put("newXp", explorer.getXp());
+            result.put("newLevel", explorer.getLevel());
+            result.put("leveledUp", leveledUp);
+            result.put("message", "Mendapatkan +" + amount + " XP!");
+        } else {
+            result.put("success", false);
+            result.put("message", "Explorer tidak ditemukan.");
+        }
+        return result;
+    }
+
     // Authentication Services
     public Map<String, Object> registerUser(String username, String password) {
         Map<String, Object> result = new LinkedHashMap<>();

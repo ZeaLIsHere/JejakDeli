@@ -192,6 +192,24 @@ public class ApiController {
         return ResponseEntity.ok(result);
     }
 
+    @PostMapping("/explorer/add-xp")
+    public ResponseEntity<Map<String, Object>> addExplorerXp(
+        @RequestParam int amount,
+        HttpSession session
+    ) {
+        Long explorerId = (Long) session.getAttribute("currentExplorerId");
+        if (explorerId == null) {
+            return ResponseEntity.status(401).body(
+                Map.of("success", false, "message", "Silakan login terlebih dahulu.")
+            );
+        }
+        Map<String, Object> result = heritageService.addXp(explorerId, amount);
+        if (result.get("success").equals(true)) {
+            return ResponseEntity.ok(result);
+        }
+        return ResponseEntity.badRequest().body(result);
+    }
+
     @PostMapping("/reset")
     public ResponseEntity<Map<String, Object>> resetExplorer(
         HttpSession session
