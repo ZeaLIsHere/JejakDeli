@@ -3,6 +3,7 @@ package com.medanheritage.service;
 import com.medanheritage.model.*;
 import com.medanheritage.repository.*;
 import org.springframework.stereotype.Service;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import jakarta.annotation.PostConstruct;
@@ -17,17 +18,20 @@ public class HeritageService {
     private final ReviewRepository reviewRepository;
     private final BadgeRepository badgeRepository;
     private final TrailRepository trailRepository;
+    private final PasswordEncoder passwordEncoder;
 
     public HeritageService(SiteRepository siteRepository,
-                           ExplorerRepository explorerRepository,
-                           ReviewRepository reviewRepository,
-                           BadgeRepository badgeRepository,
-                           TrailRepository trailRepository) {
+            ExplorerRepository explorerRepository,
+            ReviewRepository reviewRepository,
+            BadgeRepository badgeRepository,
+            TrailRepository trailRepository,
+            PasswordEncoder passwordEncoder) {
         this.siteRepository = siteRepository;
         this.explorerRepository = explorerRepository;
         this.reviewRepository = reviewRepository;
         this.badgeRepository = badgeRepository;
         this.trailRepository = trailRepository;
+        this.passwordEncoder = passwordEncoder;
     }
 
     @PostConstruct
@@ -83,28 +87,9 @@ public class HeritageService {
     }
 
     public List<HeritageSite> getSites(String search, String category) {
-        List<HeritageSite> all = siteRepository.findAll();
-        List<HeritageSite> filtered = new ArrayList<>();
-        for (HeritageSite s : all) {
-            boolean matchesSearch = true;
-            boolean matchesCategory = true;
-
-            if (search != null && !search.trim().isEmpty()) {
-                String query = search.toLowerCase();
-                matchesSearch = s.getName().toLowerCase().contains(query) ||
-                                s.getDescription().toLowerCase().contains(query) ||
-                                s.getEra().toLowerCase().contains(query);
-            }
-
-            if (category != null && !category.trim().isEmpty() && !category.equalsIgnoreCase("all")) {
-                matchesCategory = s.getStatus().equalsIgnoreCase(category);
-            }
-
-            if (matchesSearch && matchesCategory) {
-                filtered.add(s);
-            }
-        }
-        return filtered;
+        String searchParam = (search != null) ? search.trim() : "";
+        String statusParam = (category != null) ? category.trim() : "";
+        return siteRepository.searchSites(searchParam, statusParam);
     }
 
     public HeritageSite getSiteById(String id) {
@@ -140,7 +125,7 @@ public class HeritageService {
             result.put("message", "Username '" + username + "' sudah terdaftar.");
             return result;
         }
-        Explorer explorer = new Explorer(username.trim(), password.trim());
+        Explorer explorer = new Explorer(username.trim(), passwordEncoder.encode(password.trim()));
         explorerRepository.save(explorer);
         result.put("success", true);
         result.put("message", "Registrasi berhasil! Silakan login.");
@@ -148,11 +133,12 @@ public class HeritageService {
     }
 
     public Explorer authenticateUser(String username, String password) {
-        if (username == null || password == null) return null;
+        if (username == null || password == null)
+            return null;
         Optional<Explorer> opt = explorerRepository.findByUsername(username.trim());
         if (opt.isPresent()) {
             Explorer exp = opt.get();
-            if (exp.getPassword().equals(password.trim())) {
+            if (passwordEncoder.matches(password.trim(), exp.getPassword())) {
                 return exp;
             }
         }
@@ -264,7 +250,8 @@ public class HeritageService {
 
         result.put("success", true);
         result.put("trailName", trail.getName());
-        result.put("message", "Trail '" + trail.getName() + "' selesai diproses. " + visited + " situs dikunjungi, " + skipped + " situs dilewati. Bonus +" + xpGained + " XP.");
+        result.put("message", "Trail '" + trail.getName() + "' selesai diproses. " + visited + " situs dikunjungi, "
+                + skipped + " situs dilewati. Bonus +" + xpGained + " XP.");
         result.put("details", details);
         result.put("newBadges", newBadges);
         result.put("leveledUp", leveledUp);
@@ -307,7 +294,8 @@ public class HeritageService {
 
     public Review addReview(String siteId, int rating, String comment, Long explorerId) {
         Explorer explorer = getExplorerById(explorerId);
-        if (explorer == null) return null;
+        if (explorer == null)
+            return null;
         Review review = new Review(siteId, explorer, rating, comment, java.time.LocalDateTime.now());
         return reviewRepository.save(review);
     }
@@ -317,7 +305,7 @@ public class HeritageService {
         if (explorer != null) {
             explorer.reset();
             explorerRepository.save(explorer);
-            
+
             // Delete only reviews made by this explorer
             List<Review> allReviews = reviewRepository.findAll();
             for (Review rev : allReviews) {
