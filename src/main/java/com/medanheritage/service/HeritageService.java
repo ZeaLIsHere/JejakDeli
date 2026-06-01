@@ -1,17 +1,19 @@
 package com.medanheritage.service;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.medanheritage.model.*;
 import com.medanheritage.repository.*;
-import org.springframework.stereotype.Service;
-import org.springframework.security.crypto.password.PasswordEncoder;
-import com.fasterxml.jackson.databind.ObjectMapper;
-
+import com.medanheritage.util.HaversineUtil;
 import jakarta.annotation.PostConstruct;
 import java.io.InputStream;
 import java.util.*;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.stereotype.Service;
 
 @Service
 public class HeritageService {
+
+    public static final double GEOFENCE_RADIUS_METERS = 100.0;
 
     private final SiteRepository siteRepository;
     private final ExplorerRepository explorerRepository;
@@ -20,12 +22,14 @@ public class HeritageService {
     private final TrailRepository trailRepository;
     private final PasswordEncoder passwordEncoder;
 
-    public HeritageService(SiteRepository siteRepository,
-            ExplorerRepository explorerRepository,
-            ReviewRepository reviewRepository,
-            BadgeRepository badgeRepository,
-            TrailRepository trailRepository,
-            PasswordEncoder passwordEncoder) {
+    public HeritageService(
+        SiteRepository siteRepository,
+        ExplorerRepository explorerRepository,
+        ReviewRepository reviewRepository,
+        BadgeRepository badgeRepository,
+        TrailRepository trailRepository,
+        PasswordEncoder passwordEncoder
+    ) {
         this.siteRepository = siteRepository;
         this.explorerRepository = explorerRepository;
         this.reviewRepository = reviewRepository;
@@ -38,7 +42,9 @@ public class HeritageService {
     public void init() {
         try {
             ObjectMapper mapper = new ObjectMapper();
-            InputStream inputStream = getClass().getClassLoader().getResourceAsStream("data.json");
+            InputStream inputStream = getClass()
+                .getClassLoader()
+                .getResourceAsStream("data.json");
             if (inputStream != null) {
                 SeedData seed = mapper.readValue(inputStream, SeedData.class);
 
@@ -58,7 +64,9 @@ public class HeritageService {
                         List<HeritageSite> route = new ArrayList<>();
                         if (ts.routeSiteIds != null) {
                             for (String siteId : ts.routeSiteIds) {
-                                siteRepository.findById(siteId).ifPresent(route::add);
+                                siteRepository
+                                    .findById(siteId)
+                                    .ifPresent(route::add);
                             }
                         }
                         trailRepository.save(new Trail(ts.id, ts.name, route));
@@ -71,12 +79,14 @@ public class HeritageService {
     }
 
     private static class SeedData {
+
         public List<HeritageSite> sites;
         public List<Badge> badges;
         public List<TrailSeed> trails;
     }
 
     private static class TrailSeed {
+
         public String id;
         public String name;
         public List<String> routeSiteIds;
@@ -115,17 +125,28 @@ public class HeritageService {
     // Authentication Services
     public Map<String, Object> registerUser(String username, String password) {
         Map<String, Object> result = new LinkedHashMap<>();
-        if (username == null || username.trim().isEmpty() || password == null || password.trim().isEmpty()) {
+        if (
+            username == null ||
+            username.trim().isEmpty() ||
+            password == null ||
+            password.trim().isEmpty()
+        ) {
             result.put("success", false);
             result.put("message", "Username dan password tidak boleh kosong.");
             return result;
         }
         if (explorerRepository.findByUsername(username.trim()).isPresent()) {
             result.put("success", false);
-            result.put("message", "Username '" + username + "' sudah terdaftar.");
+            result.put(
+                "message",
+                "Username '" + username + "' sudah terdaftar."
+            );
             return result;
         }
-        Explorer explorer = new Explorer(username.trim(), passwordEncoder.encode(password.trim()));
+        Explorer explorer = new Explorer(
+            username.trim(),
+            passwordEncoder.encode(password.trim())
+        );
         explorerRepository.save(explorer);
         result.put("success", true);
         result.put("message", "Registrasi berhasil! Silakan login.");
@@ -133,9 +154,10 @@ public class HeritageService {
     }
 
     public Explorer authenticateUser(String username, String password) {
-        if (username == null || password == null)
-            return null;
-        Optional<Explorer> opt = explorerRepository.findByUsername(username.trim());
+        if (username == null || password == null) return null;
+        Optional<Explorer> opt = explorerRepository.findByUsername(
+            username.trim()
+        );
         if (opt.isPresent()) {
             Explorer exp = opt.get();
             if (passwordEncoder.matches(password.trim(), exp.getPassword())) {
@@ -145,13 +167,20 @@ public class HeritageService {
         return null;
     }
 
-    public Map<String, Object> visitSite(String siteId, String selectedAnswer, Long explorerId) {
+    public Map<String, Object> visitSite(
+        String siteId,
+        String selectedAnswer,
+        Long explorerId
+    ) {
         Map<String, Object> result = new LinkedHashMap<>();
         HeritageSite site = siteRepository.findById(siteId).orElse(null);
 
         if (site == null) {
             result.put("success", false);
-            result.put("message", "Situs dengan ID '" + siteId + "' tidak ditemukan.");
+            result.put(
+                "message",
+                "Situs dengan ID '" + siteId + "' tidak ditemukan."
+            );
             return result;
         }
 
@@ -164,16 +193,25 @@ public class HeritageService {
 
         if (explorer.hasVisited(siteId)) {
             result.put("success", false);
-            result.put("message", "Anda sudah pernah mengunjungi " + site.getName() + ".");
+            result.put(
+                "message",
+                "Anda sudah pernah mengunjungi " + site.getName() + "."
+            );
             return result;
         }
 
         // Verify quiz answer
         if (site.getQuiz() != null) {
             String correctOption = site.getQuiz().getCorrectOption();
-            if (selectedAnswer == null || !correctOption.equalsIgnoreCase(selectedAnswer.trim())) {
+            if (
+                selectedAnswer == null ||
+                !correctOption.equalsIgnoreCase(selectedAnswer.trim())
+            ) {
                 result.put("success", false);
-                result.put("message", "Jawaban kuis salah! Coba pelajari sejarah situs kembali.");
+                result.put(
+                    "message",
+                    "Jawaban kuis salah! Coba pelajari sejarah situs kembali."
+                );
                 return result;
             }
         }
@@ -186,7 +224,10 @@ public class HeritageService {
         explorerRepository.save(explorer);
 
         result.put("success", true);
-        result.put("message", "Jawaban Benar! Berhasil mengunjungi " + site.getName() + ".");
+        result.put(
+            "message",
+            "Jawaban Benar! Berhasil mengunjungi " + site.getName() + "."
+        );
         result.put("site", site);
         result.put("newBadges", newBadges);
         result.put("leveledUp", leveledUp);
@@ -202,7 +243,10 @@ public class HeritageService {
 
         if (trail == null) {
             result.put("success", false);
-            result.put("message", "Trail dengan ID '" + trailId + "' tidak ditemukan.");
+            result.put(
+                "message",
+                "Trail dengan ID '" + trailId + "' tidak ditemukan."
+            );
             return result;
         }
 
@@ -250,8 +294,18 @@ public class HeritageService {
 
         result.put("success", true);
         result.put("trailName", trail.getName());
-        result.put("message", "Trail '" + trail.getName() + "' selesai diproses. " + visited + " situs dikunjungi, "
-                + skipped + " situs dilewati. Bonus +" + xpGained + " XP.");
+        result.put(
+            "message",
+            "Trail '" +
+                trail.getName() +
+                "' selesai diproses. " +
+                visited +
+                " situs dikunjungi, " +
+                skipped +
+                " situs dilewati. Bonus +" +
+                xpGained +
+                " XP."
+        );
         result.put("details", details);
         result.put("newBadges", newBadges);
         result.put("leveledUp", leveledUp);
@@ -268,7 +322,9 @@ public class HeritageService {
             if (explorer.hasBadge(badge.getId())) {
                 continue;
             }
-            Trail trail = trailRepository.findById(badge.getTrailId()).orElse(null);
+            Trail trail = trailRepository
+                .findById(badge.getTrailId())
+                .orElse(null);
             if (trail == null) {
                 continue;
             }
@@ -292,12 +348,131 @@ public class HeritageService {
         return reviewRepository.findBySiteIdOrderByCreatedAtDesc(siteId);
     }
 
-    public Review addReview(String siteId, int rating, String comment, Long explorerId) {
+    public Review addReview(
+        String siteId,
+        int rating,
+        String comment,
+        Long explorerId
+    ) {
         Explorer explorer = getExplorerById(explorerId);
-        if (explorer == null)
-            return null;
-        Review review = new Review(siteId, explorer, rating, comment, java.time.LocalDateTime.now());
+        if (explorer == null) return null;
+        Review review = new Review(
+            siteId,
+            explorer,
+            rating,
+            comment,
+            java.time.LocalDateTime.now()
+        );
         return reviewRepository.save(review);
+    }
+
+    /**
+     * Geofence check-in: menghitung jarak pengguna ke semua situs menggunakan
+     * Formula Haversine. Situs yang berada dalam radius GEOFENCE_RADIUS_METERS
+     * dan belum dikunjungi akan otomatis dicatat sebagai kunjungan.
+     *
+     * @param lat        Latitude pengguna saat ini
+     * @param lon        Longitude pengguna saat ini
+     * @param explorerId ID Explorer yang sedang login
+     * @return Map berisi daftar situs terdekat dan situs yang otomatis dikunjungi
+     */
+    public Map<String, Object> geofenceCheckin(
+        double lat,
+        double lon,
+        Long explorerId
+    ) {
+        Map<String, Object> result = new LinkedHashMap<>();
+
+        Explorer explorer = getExplorerById(explorerId);
+        if (explorer == null) {
+            result.put("success", false);
+            result.put(
+                "message",
+                "Pengguna tidak ditemukan. Silakan login kembali."
+            );
+            return result;
+        }
+
+        List<HeritageSite> allSitesList = siteRepository.findAll();
+        List<Map<String, Object>> allSitesWithDistance = new ArrayList<>();
+        List<Map<String, Object>> autoVisited = new ArrayList<>();
+        boolean leveledUp = false;
+
+        for (HeritageSite site : allSitesList) {
+            double distance = HaversineUtil.calculateDistance(
+                lat,
+                lon,
+                site.getLatitude(),
+                site.getLongitude()
+            );
+
+            Map<String, Object> entry = new LinkedHashMap<>();
+            entry.put("siteId", site.getId());
+            entry.put("siteName", site.getName());
+            entry.put("era", site.getEra());
+            entry.put("distance", Math.round(distance));
+            entry.put("latitude", site.getLatitude());
+            entry.put("longitude", site.getLongitude());
+            entry.put("alreadyVisited", explorer.hasVisited(site.getId()));
+            entry.put("inRange", distance <= GEOFENCE_RADIUS_METERS);
+            entry.put("autoVisited", false);
+
+            allSitesWithDistance.add(entry);
+
+            // Geofencing: auto-kunjungi jika dalam radius dan belum dikunjungi
+            if (
+                distance <= GEOFENCE_RADIUS_METERS &&
+                !explorer.hasVisited(site.getId())
+            ) {
+                explorer.visit(site);
+                if (explorer.addXp(100)) {
+                    leveledUp = true;
+                }
+                entry.put("autoVisited", true);
+                autoVisited.add(entry);
+            }
+        }
+
+        // Urutkan semua situs berdasarkan jarak terdekat
+        allSitesWithDistance.sort((a, b) ->
+            Long.compare((Long) a.get("distance"), (Long) b.get("distance"))
+        );
+
+        // Ambil 5 situs terdekat untuk ditampilkan
+        List<Map<String, Object>> nearestSites = allSitesWithDistance.subList(
+            0,
+            Math.min(5, allSitesWithDistance.size())
+        );
+
+        // Simpan perubahan jika ada yang dikunjungi
+        List<Badge> newBadges = new ArrayList<>();
+        if (!autoVisited.isEmpty()) {
+            explorerRepository.save(explorer);
+            newBadges = checkAndAwardBadges(explorer);
+            explorerRepository.save(explorer);
+        }
+
+        result.put("success", true);
+        result.put("autoVisited", autoVisited);
+        result.put("nearestSites", nearestSites);
+        result.put("newBadges", newBadges);
+        result.put("leveledUp", leveledUp);
+        result.put("radius", (int) GEOFENCE_RADIUS_METERS);
+        result.put("newXp", explorer.getXp());
+        result.put("newLevel", explorer.getLevel());
+        result.put(
+            "message",
+            autoVisited.isEmpty()
+                ? "Tidak ada situs baru dalam radius " +
+                      (int) GEOFENCE_RADIUS_METERS +
+                      " meter."
+                : autoVisited.size() +
+                      " situs otomatis dikunjungi karena Anda berada dalam radius " +
+                      (int) GEOFENCE_RADIUS_METERS +
+                      " meter!"
+        );
+
+        return result;
     }
 
     public void resetExplorer(Long explorerId) {
@@ -309,7 +484,10 @@ public class HeritageService {
             // Delete only reviews made by this explorer
             List<Review> allReviews = reviewRepository.findAll();
             for (Review rev : allReviews) {
-                if (rev.getExplorer() != null && rev.getExplorer().getId().equals(explorerId)) {
+                if (
+                    rev.getExplorer() != null &&
+                    rev.getExplorer().getId().equals(explorerId)
+                ) {
                     reviewRepository.delete(rev);
                 }
             }

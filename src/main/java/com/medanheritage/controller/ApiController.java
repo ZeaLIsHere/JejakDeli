@@ -5,13 +5,12 @@ import com.medanheritage.model.HeritageSite;
 import com.medanheritage.model.Review;
 import com.medanheritage.model.Trail;
 import com.medanheritage.service.HeritageService;
-import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
-
 import jakarta.servlet.http.HttpSession;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/api")
@@ -24,8 +23,10 @@ public class ApiController {
     }
 
     @GetMapping("/sites")
-    public List<HeritageSite> getAllSites(@RequestParam(required = false) String search,
-                                         @RequestParam(required = false) String category) {
+    public List<HeritageSite> getAllSites(
+        @RequestParam(required = false) String search,
+        @RequestParam(required = false) String category
+    ) {
         return heritageService.getSites(search, category);
     }
 
@@ -58,14 +59,27 @@ public class ApiController {
     }
 
     @PostMapping("/visit/{siteId}")
-    public ResponseEntity<Map<String, Object>> visitSite(@PathVariable String siteId,
-                                                         @RequestParam(required = false) String answer,
-                                                         HttpSession session) {
+    public ResponseEntity<Map<String, Object>> visitSite(
+        @PathVariable String siteId,
+        @RequestParam(required = false) String answer,
+        HttpSession session
+    ) {
         Long explorerId = (Long) session.getAttribute("currentExplorerId");
         if (explorerId == null) {
-            return ResponseEntity.status(401).body(Map.of("success", false, "message", "Silakan login terlebih dahulu."));
+            return ResponseEntity.status(401).body(
+                Map.of(
+                    "success",
+                    false,
+                    "message",
+                    "Silakan login terlebih dahulu."
+                )
+            );
         }
-        Map<String, Object> result = heritageService.visitSite(siteId, answer, explorerId);
+        Map<String, Object> result = heritageService.visitSite(
+            siteId,
+            answer,
+            explorerId
+        );
         boolean success = (boolean) result.get("success");
         if (success) {
             return ResponseEntity.ok(result);
@@ -74,18 +88,32 @@ public class ApiController {
     }
 
     @PostMapping("/trail/{trailId}")
-    public ResponseEntity<Map<String, Object>> followTrail(@PathVariable String trailId,
-                                                           HttpSession session) {
+    public ResponseEntity<Map<String, Object>> followTrail(
+        @PathVariable String trailId,
+        HttpSession session
+    ) {
         Long explorerId = (Long) session.getAttribute("currentExplorerId");
         if (explorerId == null) {
-            return ResponseEntity.status(401).body(Map.of("success", false, "message", "Silakan login terlebih dahulu."));
+            return ResponseEntity.status(401).body(
+                Map.of(
+                    "success",
+                    false,
+                    "message",
+                    "Silakan login terlebih dahulu."
+                )
+            );
         }
-        Map<String, Object> result = heritageService.followTrail(trailId, explorerId);
+        Map<String, Object> result = heritageService.followTrail(
+            trailId,
+            explorerId
+        );
         return ResponseEntity.ok(result);
     }
 
     @GetMapping("/explorer")
-    public ResponseEntity<Map<String, Object>> getExplorer(HttpSession session) {
+    public ResponseEntity<Map<String, Object>> getExplorer(
+        HttpSession session
+    ) {
         Long explorerId = (Long) session.getAttribute("currentExplorerId");
         if (explorerId == null) {
             return ResponseEntity.status(401).build();
@@ -111,20 +139,63 @@ public class ApiController {
     }
 
     @PostMapping("/sites/{siteId}/reviews")
-    public ResponseEntity<Review> addSiteReview(@PathVariable String siteId,
-                                                @RequestParam int rating,
-                                                @RequestParam String comment,
-                                                HttpSession session) {
+    public ResponseEntity<Review> addSiteReview(
+        @PathVariable String siteId,
+        @RequestParam int rating,
+        @RequestParam String comment,
+        HttpSession session
+    ) {
         Long explorerId = (Long) session.getAttribute("currentExplorerId");
         if (explorerId == null) {
             return ResponseEntity.status(401).build();
         }
-        Review review = heritageService.addReview(siteId, rating, comment, explorerId);
+        Review review = heritageService.addReview(
+            siteId,
+            rating,
+            comment,
+            explorerId
+        );
         return ResponseEntity.ok(review);
     }
 
+    /**
+     * Geofence Check-in Endpoint.
+     * Menerima koordinat GPS pengguna, menghitung jarak ke semua situs,
+     * dan otomatis mencatat kunjungan jika dalam radius.
+     *
+     * @param lat     Latitude pengguna
+     * @param lon     Longitude pengguna
+     * @param session HTTP Session untuk mendapatkan explorerId
+     */
+    @PostMapping("/geofence/checkin")
+    public ResponseEntity<Map<String, Object>> geofenceCheckin(
+        @RequestParam double lat,
+        @RequestParam double lon,
+        HttpSession session
+    ) {
+        Long explorerId = (Long) session.getAttribute("currentExplorerId");
+        if (explorerId == null) {
+            return ResponseEntity.status(401).body(
+                Map.of(
+                    "success",
+                    false,
+                    "message",
+                    "Silakan login terlebih dahulu."
+                )
+            );
+        }
+        Map<String, Object> result = heritageService.geofenceCheckin(
+            lat,
+            lon,
+            explorerId
+        );
+        return ResponseEntity.ok(result);
+    }
+
     @PostMapping("/reset")
-    public ResponseEntity<Map<String, Object>> resetExplorer(HttpSession session) {
+    public ResponseEntity<Map<String, Object>> resetExplorer(
+        HttpSession session
+    ) {
         Long explorerId = (Long) session.getAttribute("currentExplorerId");
         if (explorerId == null) {
             return ResponseEntity.status(401).build();
@@ -132,7 +203,10 @@ public class ApiController {
         heritageService.resetExplorer(explorerId);
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("success", true);
-        result.put("message", "Riwayat kunjungan dan ulasan Anda berhasil direset.");
+        result.put(
+            "message",
+            "Riwayat kunjungan dan ulasan Anda berhasil direset."
+        );
         return ResponseEntity.ok(result);
     }
 }
