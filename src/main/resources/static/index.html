@@ -249,6 +249,31 @@
                             <span id="trackingStatusText">Tidak Aktif</span>
                         </div>
                     </div>
+                    <div class="geofence-actions">
+                        <button class="btn-geo-start" id="btnStartTracking" onclick="startLocationTracking()" style="display: none;">Mulai GPS</button>
+                        <button class="btn-geo-stop" id="btnStopTracking" onclick="stopLocationTracking()" style="display: none;">Hentikan GPS</button>
+                        <button class="btn-geo-sim" id="btnSimulateLocation" onclick="toggleSimulationMode()" style="display: none;">Simulasi Lokasi</button>
+                    </div>
+
+                    <div class="simulation-panel" id="simulationPanel" style="display: none;">
+                        <p>Mode Simulasi Aktif. Klik pada peta untuk memindahkan lokasi Anda, atau pilih situs di bawah ini:</p>
+                        <div class="form-group" style="margin-bottom: 12px;">
+                            <label for="simSiteSelector">Teleportasi ke Situs:</label>
+                            <select id="simSiteSelector" onchange="teleportToSite(this.value)" style="width: 100%; padding: 8px; border: 1px solid var(--border); border-radius: 6px;">
+                                <option value="">-- Pilih Situs --</option>
+                            </select>
+                        </div>
+                        <div class="sim-inputs">
+                            <div class="form-group">
+                                <label>Latitude Simulasi</label>
+                                <input type="number" step="any" id="simLat" onchange="updateSimulatedLocationFromInputs()">
+                            </div>
+                            <div class="form-group">
+                                <label>Longitude Simulasi</label>
+                                <input type="number" step="any" id="simLon" onchange="updateSimulatedLocationFromInputs()">
+                            </div>
+                        </div>
+                    </div>
 
                     <!-- Koordinat Saat Ini (hidden by default) -->
                     <div
@@ -373,15 +398,13 @@
                         <!-- Top: Nearest unvisited site + distance -->
                         <div class="hud-top">
                             <div class="hud-target-card" id="hudTargetCard">
-                                <span class="hud-target-label"
-                                    >Tujuan Terdekat</span
-                                >
-                                <span class="hud-target-name" id="hudSiteName"
-                                    >Memuat...</span
-                                >
-                                <span class="hud-target-dist" id="hudDistance"
-                                    >—</span
-                                >
+                                <span class="hud-target-label">Tujuan Terdekat</span>
+                                <span class="hud-target-name" id="hudSiteName">Memuat...</span>
+                                <span class="hud-target-dist" id="hudDistance">—</span>
+                                <div style="display: flex; gap: 8px; margin-top: 8px; justify-content: center; flex-wrap: wrap;">
+                                    <button class="btn-geo-sim" id="btnSimulateWalk" onclick="toggleWalkSimulation()" style="display: none; padding: 6px 12px; font-size: 11px; width: auto; background-color: var(--teal); color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600;">Mulai Simulasi Explore</button>
+                                    <button class="btn-visit" onclick="openQrScanner()" style="padding: 6px 12px; font-size: 11px; width: auto; background-color: var(--yellow); color: var(--text-dark); border: none; border-radius: 6px; cursor: pointer; font-weight: 600;">Pindai QR Code</button>
+                                </div>
                             </div>
                         </div>
 
@@ -580,6 +603,12 @@
                                 </div>
                             </ul>
                         </div>
+                        <div class="history-card" style="margin-top: 20px;">
+                            <h3>Aktivitas Penjelajahan</h3>
+                            <ul class="history-list" id="activityLogList" style="max-height: 250px; overflow-y: auto;">
+                                <div class="history-empty">Belum ada aktivitas tercatat.</div>
+                            </ul>
+                        </div>
                     </div>
                 </div>
             </section>
@@ -651,6 +680,11 @@
                             D. ...
                         </button>
                     </div>
+                </div>
+                <div style="margin-top: 15px; border-top: 1px dashed var(--border); padding-top: 15px;">
+                    <button class="btn-visit" onclick="openQrScannerFromQuiz()" style="width: 100%; background-color: var(--yellow); color: var(--text-dark); font-weight: 600; padding: 10px; border-radius: 6px; border: none; cursor: pointer;">
+                        Pindai QR Code Situs
+                    </button>
                 </div>
                 <button
                     class="btn-close-modal"
@@ -826,7 +860,26 @@
             </div>
         </div>
 
+        <div class="modal-overlay" id="qrScannerModal" onclick="closeQrScanner()" style="display: none; align-items: center; justify-content: center; z-index: 9999;">
+            <div class="modal" onclick="event.stopPropagation()" style="max-width: 480px; width: 90%; background: #1a1a2e; color: #ffffff; border-radius: 12px; padding: 20px; box-shadow: var(--shadow-md); border: 1px solid rgba(255, 255, 255, 0.1);">
+                <h3 style="margin-bottom: 8px;">Pindai QR Code Situs</h3>
+                <p class="modal-subtitle" style="color: rgba(255,255,255,0.7); font-size: 13px; margin-bottom: 16px;">
+                    Arahkan kamera perangkat Anda ke QR Code situs untuk check-in instan.
+                </p>
+                <div id="qr-reader" style="width: 100%; border-radius: 8px; overflow: hidden; background: #000; border: 1px solid rgba(255,255,255,0.15);"></div>
+                <div style="display: flex; gap: 10px; margin-top: 20px;">
+                    <button class="btn-visit" id="btn-toggle-torch" onclick="toggleFlashlight()" style="flex: 1; padding: 10px; background-color: var(--teal); border: none; border-radius: 6px; color: #fff; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px;">
+                        Senter
+                    </button>
+                    <button class="btn-close-modal" onclick="closeQrScanner()" style="flex: 1; padding: 10px; background-color: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); border-radius: 6px; color: #fff; font-weight: 600; cursor: pointer;">
+                        Batal
+                    </button>
+                </div>
+            </div>
+        </div>
+
         <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+        <script src="https://unpkg.com/html5-qrcode"></script>
         <script src="/js/app.js?v=1.3"></script>
     </body>
 </html>

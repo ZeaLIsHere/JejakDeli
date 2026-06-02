@@ -15,6 +15,8 @@ public class HeritageSite extends Location {
     @Embedded
     private QuizQuestion quiz;
 
+    private String qrCodeToken;
+
     public HeritageSite() {
         super();
     }
@@ -64,5 +66,13 @@ public class HeritageSite extends Location {
 
     public void setImageUrl(String imageUrl) {
         this.imageUrl = imageUrl;
+    }
+
+    public String getQrCodeToken() {
+        return qrCodeToken;
+    }
+
+    public void setQrCodeToken(String qrCodeToken) {
+        this.qrCodeToken = qrCodeToken;
     }
 }

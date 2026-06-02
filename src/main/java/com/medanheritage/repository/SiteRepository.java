@@ -12,6 +12,7 @@ import java.util.List;
 public interface SiteRepository extends JpaRepository<HeritageSite, String> {
     List<HeritageSite> findByNameContainingIgnoreCase(String name);
     List<HeritageSite> findByStatusContainingIgnoreCase(String status);
+    java.util.Optional<HeritageSite> findByQrCodeToken(String qrCodeToken);
 
     @Query("SELECT s FROM HeritageSite s WHERE " +
            "(:search IS NULL OR :search = '' OR " +

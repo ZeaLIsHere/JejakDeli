@@ -1,5 +1,17 @@
 document.addEventListener("DOMContentLoaded", function () {
   checkLoginStatus();
+  if (navigator.geolocation) {
+    navigator.geolocation.getCurrentPosition(function (position) {
+      currentLat = position.coords.latitude;
+      currentLon = position.coords.longitude;
+      if (map) {
+        updateUserMarker(currentLat, currentLon);
+      }
+      if (jelajahMap) {
+        updateJelajahPlayer(currentLat, currentLon);
+      }
+    }, function () {});
+  }
 });
 
 var allSites = [];
@@ -18,6 +30,15 @@ var routeExpMarkers = {};
 // ---- Geofencing / Location Tracking ----
 var locationWatcher = null;
 var isTracking = false;
+var isSimulating = false;
+var currentLat = 3.5833;
+var currentLon = 98.6833;
+var currentRouteLatLngs = [];
+var walkSimInterval = null;
+var walkSimIndex = 0;
+var isSimulatingWalk = false;
+var shouldConfirmNextWaypoint = false;
+var completedSiteName = "";
 var userLocationMarker = null;
 var geofenceCircles = [];
 var lastCheckinTime = 0;
@@ -66,22 +87,33 @@ function showApp(username, isAdmin) {
   document.getElementById("appNavbar").style.display = "block";
   document.getElementById("appMainContent").style.display = "block";
 
-  // Tampilkan/sembunyikan link Admin di navbar
   var navAdminLink = document.getElementById("navAdminLink");
   if (navAdminLink)
     navAdminLink.style.display = currentIsAdmin ? "list-item" : "none";
 
-  // Load initial app data
+  var btnSim = document.getElementById("btnSimulateLocation");
+  if (btnSim) {
+    btnSim.style.display = currentIsAdmin ? "inline-block" : "none";
+  }
+
   loadSites();
   loadTrails();
   loadBadges();
   loadExplorerState();
 
-  // Mulai pelacakan GPS otomatis saat login
   startLocationTracking();
+  logActivity("system", "Masuk ke aplikasi sebagai " + username + ".");
+  renderActivityLog();
 }
 
 function showAuth() {
+  if (isSimulating) {
+    isSimulating = false;
+    var panel = document.getElementById("simulationPanel");
+    if (panel) {
+      panel.style.display = "none";
+    }
+  }
   stopLocationTracking();
   currentExplorerName = "";
   document.getElementById("page-auth").style.display = "flex";
@@ -544,6 +576,7 @@ function handleNewBadges(newBadges) {
         'Anda mendapatkan badge "' + newBadges[i].name + '"',
         "success",
       );
+      logActivity("badge", "Mendapatkan badge: " + newBadges[i].name + ".");
     }
   }
 }
@@ -598,15 +631,20 @@ function submitQuizAnswer(answerLetter) {
       if (res.status === 200) {
         var d = res.body;
         showToast("Kunjungan Berhasil", d.message, "success");
+        logActivity("visit", "Mengunjungi situs " + d.site.name + ".");
         if (d.leveledUp) {
           showToast(
             "Naik Level!",
             "Selamat! Level Anda naik menjadi Level " + d.newLevel,
             "info",
           );
+          logActivity("system", "Naik level ke Level " + d.newLevel + "!");
         }
         handleNewBadges(d.newBadges);
         closeQuizModal();
+        if (customRouteTargetId === d.site.id) {
+          customRouteTargetId = null;
+        }
         loadExplorerState();
       } else {
         showToast(
@@ -840,11 +878,19 @@ function initMap(sites) {
     markers = {};
   }
 
-  map = L.map("map").setView([3.5833, 98.6833], 14);
+  map = L.map("map").setView([currentLat, currentLon], 14);
   L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
     attribution: "&copy; OpenStreetMap contributors",
     maxZoom: 18,
   }).addTo(map);
+
+  map.on("click", function (e) {
+    if (isSimulating) {
+      updateSimulatedLocation(e.latlng.lat, e.latlng.lng);
+    }
+  });
+
+  updateUserMarker(currentLat, currentLon);
 
   var yellowIcon = L.icon({
     iconUrl:
@@ -969,8 +1015,10 @@ function haversineDistance(lat1, lon1, lat2, lon2) {
   return R * c;
 }
 
-/** Memulai pelacakan GPS real-time menggunakan browser Geolocation API */
 function startLocationTracking() {
+  if (isSimulating) {
+    return;
+  }
   if (!navigator.geolocation) {
     showToast(
       "GPS Tidak Tersedia",
@@ -989,7 +1037,6 @@ function startLocationTracking() {
   );
 }
 
-/** Menghentikan pelacakan GPS */
 function stopLocationTracking() {
   if (locationWatcher !== null) {
     navigator.geolocation.clearWatch(locationWatcher);
@@ -998,7 +1045,6 @@ function stopLocationTracking() {
   isTracking = false;
   setTrackingUI(false);
 
-  // Hapus marker user dari peta
   if (userLocationMarker && map) {
     map.removeLayer(userLocationMarker);
     userLocationMarker = null;
@@ -1010,14 +1056,14 @@ function stopLocationTracking() {
   showToast("Pelacakan Dihentikan", "Pelacakan lokasi GPS dimatikan.", "info");
 }
 
-/** Callback sukses dari watchPosition */
 function onLocationSuccess(position) {
   var lat = position.coords.latitude;
   var lon = position.coords.longitude;
+  currentLat = lat;
+  currentLon = lon;
   var accuracy = Math.round(position.coords.accuracy);
   var now = new Date();
 
-  // Tampilkan koordinat
   document.getElementById("geofenceCoordsRow").style.display = "flex";
   document.getElementById("geoLat").textContent = lat.toFixed(6);
   document.getElementById("geoLon").textContent = lon.toFixed(6);
@@ -1029,16 +1075,10 @@ function onLocationSuccess(position) {
     ":" +
     now.getSeconds().toString().padStart(2, "0");
 
-  // Update marker user di peta
   updateUserMarker(lat, lon, accuracy);
-
-  // Update daftar situs terdekat secara lokal (tanpa panggil backend)
   updateNearbyDisplay(lat, lon);
-
-  // Sinkronisasi posisi ke halaman Jelajah
   updateJelajahPlayer(lat, lon);
 
-  // Panggil backend untuk geofence check-in (dengan cooldown)
   var elapsed = Date.now() - lastCheckinTime;
   if (elapsed >= CHECKIN_COOLDOWN_MS) {
     lastCheckinTime = Date.now();
@@ -1196,7 +1236,6 @@ function checkGeofencingBackend(lat, lon) {
     .then(function (data) {
       if (!data || !data.success) return;
 
-      // Tampilkan notifikasi jika ada situs yang otomatis dikunjungi
       if (data.autoVisited && data.autoVisited.length > 0) {
         var onJelajah = document
           .getElementById("page-jelajah")
@@ -1216,6 +1255,10 @@ function checkGeofencingBackend(lat, lon) {
               "success",
             );
           }
+          logActivity("visit", "Mengunjungi situs " + s.siteName + ".");
+          if (customRouteTargetId === s.siteId) {
+            customRouteTargetId = null;
+          }
         }
         if (data.leveledUp) {
           showToast(
@@ -1223,11 +1266,11 @@ function checkGeofencingBackend(lat, lon) {
             "Selamat! Level Anda naik ke Level " + data.newLevel,
             "info",
           );
+          logActivity("system", "Naik level ke Level " + data.newLevel + "!");
         }
         if (data.newBadges && data.newBadges.length > 0) {
           handleNewBadges(data.newBadges);
         }
-        // Refresh UI
         loadExplorerState();
       }
     })
@@ -1236,20 +1279,177 @@ function checkGeofencingBackend(lat, lon) {
     });
 }
 
-/** Update tampilan status tracking (badge dan tombol stop) */
 function setTrackingUI(active) {
   var dot = document.getElementById("statusDot");
   var text = document.getElementById("trackingStatusText");
+  var btnStart = document.getElementById("btnStartTracking");
   var btnStop = document.getElementById("btnStopTracking");
+  var btnSim = document.getElementById("btnSimulateLocation");
 
-  if (active) {
+  if (isSimulating) {
+    dot.classList.add("active");
+    text.textContent = "Simulasi Aktif";
+    if (btnStart) btnStart.style.display = "inline-block";
+    if (btnStop) btnStop.style.display = "none";
+    if (btnSim) btnSim.textContent = "Matikan Simulasi";
+  } else if (active) {
     dot.classList.add("active");
     text.textContent = "Aktif";
+    if (btnStart) btnStart.style.display = "none";
     if (btnStop) btnStop.style.display = "inline-block";
+    if (btnSim) btnSim.textContent = "Simulasi Lokasi";
   } else {
     dot.classList.remove("active");
     text.textContent = "Tidak Aktif";
+    if (btnStart) btnStart.style.display = "inline-block";
     if (btnStop) btnStop.style.display = "none";
+    if (btnSim) btnSim.textContent = "Simulasi Lokasi";
+  }
+}
+
+function toggleSimulationMode() {
+  var panel = document.getElementById("simulationPanel");
+  if (isSimulating) {
+    isSimulating = false;
+    if (panel) panel.style.display = "none";
+    startLocationTracking();
+  } else {
+    isSimulating = true;
+    if (locationWatcher !== null) {
+      navigator.geolocation.clearWatch(locationWatcher);
+      locationWatcher = null;
+    }
+    isTracking = false;
+    if (panel) panel.style.display = "block";
+    populateSimSites();
+    setTrackingUI(false);
+    var defaultLat = 3.5753;
+    var defaultLon = 98.6837;
+    if (userLocationMarker) {
+      var ll = userLocationMarker.getLatLng();
+      defaultLat = ll.lat;
+      defaultLon = ll.lng;
+    }
+    updateSimulatedLocation(defaultLat, defaultLon);
+  }
+}
+
+function populateSimSites() {
+  var selector = document.getElementById("simSiteSelector");
+  if (!selector || selector.options.length > 1) return;
+  for (var i = 0; i < allSites.length; i++) {
+    var opt = document.createElement("option");
+    opt.value = allSites[i].latitude + "," + allSites[i].longitude;
+    opt.textContent = allSites[i].name;
+    selector.appendChild(opt);
+  }
+}
+
+function teleportToSite(val) {
+  if (!val) return;
+  var coords = val.split(",");
+  var lat = parseFloat(coords[0]);
+  var lon = parseFloat(coords[1]);
+  updateSimulatedLocation(lat, lon);
+}
+
+function updateSimulatedLocationFromInputs() {
+  var lat = parseFloat(document.getElementById("simLat").value);
+  var lon = parseFloat(document.getElementById("simLon").value);
+  if (!isNaN(lat) && !isNaN(lon)) {
+    updateSimulatedLocation(lat, lon);
+  }
+}
+
+function updateSimulatedLocation(lat, lon) {
+  document.getElementById("simLat").value = lat;
+  document.getElementById("simLon").value = lon;
+  onLocationSuccess({
+    coords: {
+      latitude: lat,
+      longitude: lon,
+      accuracy: 10
+    }
+  });
+}
+
+function interpolatePath(points, stepDistance) {
+  if (points.length < 2) return points;
+  var path = [points[0]];
+  for (var i = 1; i < points.length; i++) {
+    var p1 = points[i - 1];
+    var p2 = points[i];
+    var dist = haversineDistance(p1[0], p1[1], p2[0], p2[1]);
+    var numSteps = Math.floor(dist / stepDistance);
+    for (var k = 1; k <= numSteps; k++) {
+      var ratio = k / (numSteps + 1);
+      var lat = p1[0] + (p2[0] - p1[0]) * ratio;
+      var lon = p1[1] + (p2[1] - p1[1]) * ratio;
+      path.push([lat, lon]);
+    }
+    path.push(p2);
+  }
+  return path;
+}
+
+function toggleWalkSimulation() {
+  var btn = document.getElementById("btnSimulateWalk");
+  if (isSimulatingWalk) {
+    stopWalkSimulation();
+    showToast("Simulasi Jeda", "Simulasi perjalanan dihentikan.", "info");
+  } else {
+    if (!currentRouteLatLngs || currentRouteLatLngs.length < 2) {
+      showToast("Simulasi Gagal", "Silakan tentukan rute perjalanan terlebih dahulu.", "error");
+      return;
+    }
+    isSimulatingWalk = true;
+    if (btn) btn.textContent = "Hentikan Simulasi Explore";
+    var interpolated = interpolatePath(currentRouteLatLngs, 15);
+    walkSimIndex = 0;
+    walkSimInterval = setInterval(function () {
+      if (walkSimIndex >= interpolated.length) {
+        stopWalkSimulation();
+        handleArrivalAtDestination();
+        return;
+      }
+      var pt = interpolated[walkSimIndex];
+      updateSimulatedLocation(pt[0], pt[1]);
+      walkSimIndex++;
+    }, 300);
+  }
+}
+
+function stopWalkSimulation() {
+  if (walkSimInterval) {
+    clearInterval(walkSimInterval);
+    walkSimInterval = null;
+  }
+  isSimulatingWalk = false;
+  var btn = document.getElementById("btnSimulateWalk");
+  if (btn) btn.textContent = "Mulai Simulasi Explore";
+}
+
+function handleArrivalAtDestination() {
+  var targetSiteId = customRouteTargetId || lastRouteTargetId;
+  if (!targetSiteId) return;
+  var site = allSites.find(function (s) {
+    return s.id === targetSiteId;
+  });
+  if (!site) return;
+
+  var confirmVisit = confirm("Anda telah sampai di " + site.name + "! Apakah Anda ingin mengunjungi dan menjawab kuis?");
+  if (confirmVisit) {
+    openQuizModal(site.id);
+    if (activeTrailId) {
+      shouldConfirmNextWaypoint = true;
+      completedSiteName = site.name;
+    }
+  } else {
+    if (activeTrailId) {
+      shouldConfirmNextWaypoint = true;
+      completedSiteName = site.name;
+      refreshTrailModeIfActive();
+    }
   }
 }
 
@@ -1263,6 +1463,7 @@ function initJelajahPage() {
     setTimeout(function () {
       jelajahMap.invalidateSize();
     }, 100);
+    updateJelajahPlayer(currentLat, currentLon);
     return;
   }
   var container = document.getElementById("jelajahMap");
@@ -1271,7 +1472,7 @@ function initJelajahPage() {
   jelajahMap = L.map("jelajahMap", {
     zoomControl: false,
     attributionControl: false,
-  }).setView([3.5833, 98.6833], 16);
+  }).setView([currentLat, currentLon], 16);
 
   L.tileLayer(
     "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png",
@@ -1281,15 +1482,17 @@ function initJelajahPage() {
     },
   ).addTo(jelajahMap);
 
+  jelajahMap.on("click", function (e) {
+    if (isSimulating) {
+      updateSimulatedLocation(e.latlng.lat, e.latlng.lng);
+    }
+  });
+
   L.control.zoom({ position: "bottomleft" }).addTo(jelajahMap);
 
   renderJelajahSiteMarkers();
 
-  // Jika posisi user sudah tersedia, langsung tampilkan
-  if (userLocationMarker) {
-    var ll = userLocationMarker.getLatLng();
-    updateJelajahPlayer(ll.lat, ll.lng);
-  }
+  updateJelajahPlayer(currentLat, currentLon);
 
   // Kompas — minta izin di iOS 13+
   if (window.DeviceOrientationEvent) {
@@ -1447,13 +1650,9 @@ function updateJelajahHUD(lat, lon) {
 
   var targetSite = null;
   if (customRouteTargetId) {
-    if (isVisited(customRouteTargetId)) {
-      customRouteTargetId = null;
-    } else {
-      targetSite = allSites.find(function (s) {
-        return s.id === customRouteTargetId;
-      });
-    }
+    targetSite = allSites.find(function (s) {
+      return s.id === customRouteTargetId;
+    });
   }
 
   if (!targetSite) {
@@ -1463,6 +1662,10 @@ function updateJelajahHUD(lat, lon) {
     if (unvisited.length === 0) {
       nameEl.textContent = "Semua situs dikunjungi!";
       distEl.textContent = "";
+      var btnWalk = document.getElementById("btnSimulateWalk");
+      if (btnWalk) {
+        btnWalk.style.display = "none";
+      }
       return;
     }
 
@@ -1488,6 +1691,11 @@ function updateJelajahHUD(lat, lon) {
     distRounded < 1000
       ? distRounded + " m"
       : (distRounded / 1000).toFixed(2) + " km";
+
+  var btnWalk = document.getElementById("btnSimulateWalk");
+  if (btnWalk) {
+    btnWalk.style.display = isSimulating ? "inline-block" : "none";
+  }
 }
 
 /**
@@ -1499,13 +1707,9 @@ function updateJelajahRoute(userLat, userLon) {
 
   var targetSite = null;
   if (customRouteTargetId) {
-    if (isVisited(customRouteTargetId)) {
-      customRouteTargetId = null;
-    } else {
-      targetSite = allSites.find(function (s) {
-        return s.id === customRouteTargetId;
-      });
-    }
+    targetSite = allSites.find(function (s) {
+      return s.id === customRouteTargetId;
+    });
   }
 
   if (!targetSite) {
@@ -1586,12 +1790,10 @@ function drawRouteFromGeoJSON(coords) {
   if (!jelajahMap) return;
   clearJelajahRoute();
 
-  // OSRM mengembalikan [lon, lat], Leaflet membutuhkan [lat, lon]
   var latlngs = coords.map(function (c) {
     return [c[1], c[0]];
   });
 
-  // Dua layer: border bawah + fill atas (gaya Google Maps)
   var border = L.polyline(latlngs, {
     color: "#0d2b4e",
     weight: 9,
@@ -1607,14 +1809,18 @@ function drawRouteFromGeoJSON(coords) {
     lineJoin: "round",
   });
 
+  currentRouteLatLngs = latlngs;
   jelajahRouteLayer = L.layerGroup([border, fill]).addTo(jelajahMap);
   generateRouteExpPoints(latlngs);
 }
 
-/** Fallback: garis lurus sementara OSRM belum merespons */
 function drawStraightRoute(lat1, lon1, lat2, lon2) {
   if (!jelajahMap) return;
   clearJelajahRoute();
+  currentRouteLatLngs = [
+    [lat1, lon1],
+    [lat2, lon2]
+  ];
   jelajahRouteLayer = L.polyline(
     [
       [lat1, lon1],
@@ -1634,13 +1840,13 @@ function drawStraightRoute(lat1, lon1, lat2, lon2) {
   ]);
 }
 
-/** Hapus layer rute dari peta */
 function clearJelajahRoute() {
   if (jelajahRouteLayer && jelajahMap) {
     jelajahMap.removeLayer(jelajahRouteLayer);
     jelajahRouteLayer = null;
   }
   clearRouteExpMarkers();
+  currentRouteLatLngs = [];
 }
 
 function generateRouteExpPoints(latlngs) {
@@ -1766,14 +1972,16 @@ function collectExpPoint(ep) {
           "Mendapatkan +" + ep.xpValue + " XP dari perjalanan!",
           "success",
         );
+        logActivity("xp", "Mendapatkan +" + ep.xpValue + " XP dari perjalanan.");
         if (res.leveledUp) {
           showToast(
             "Naik Level!",
             "Selamat! Level Anda naik menjadi Level " + res.newLevel,
             "info",
           );
+          logActivity("system", "Naik level ke Level " + res.newLevel + "!");
         }
-        loadExplorerState(); // Update tampilan Riwayat (XP progress bar & level)
+        loadExplorerState();
       }
     })
     .catch(function () {});
@@ -2172,22 +2380,29 @@ function refreshTrailModeIfActive() {
   });
   if (!trail) return;
 
-  // Cek apakah semua situs dikunjungi → trail selesai
   var allVisited = trail.route.every(function (s) {
     return isVisited(s.id);
   });
   if (allVisited) {
     showToast(
-      "Trail Selesai! 🎉",
+      "Trail Selesai!",
       "Selamat! Kamu telah menyelesaikan trail " + trail.name + ".",
       "success",
     );
-    // Lakukan followTrail backend untuk award badge
+    logActivity("trail", "Menyelesaikan Trail " + trail.name + ".");
     fetch("/api/trail/" + activeTrailId, { method: "POST" })
       .then(function (r) {
         return r.json();
       })
       .then(function (d) {
+        if (d.leveledUp) {
+          showToast(
+            "Naik Level!",
+            "Selamat! Level Anda naik menjadi Level " + d.newLevel,
+            "info",
+          );
+          logActivity("system", "Naik level ke Level " + d.newLevel + "!");
+        }
         handleNewBadges(d.newBadges);
         loadExplorerState();
       })
@@ -2196,23 +2411,201 @@ function refreshTrailModeIfActive() {
     return;
   }
 
-  // Update index ke situs berikutnya yang belum dikunjungi
+  var nextIndex = 0;
   for (var i = 0; i < trail.route.length; i++) {
     if (!isVisited(trail.route[i].id)) {
-      activeTrailSiteIndex = i;
+      nextIndex = i;
       break;
     }
   }
-  renderTrailModePanel(trail);
 
-  // Update target navigasi ke waypoint baru
-  var nextSite = trail.route[activeTrailSiteIndex];
-  if (nextSite && customRouteTargetId !== nextSite.id) {
-    customRouteTargetId = nextSite.id;
-    lastRouteTargetId = null;
-    if (userLocationMarker) {
-      var ll = userLocationMarker.getLatLng();
-      updateJelajahPlayer(ll.lat, ll.lng);
+  var nextSite = trail.route[nextIndex];
+
+  if (shouldConfirmNextWaypoint) {
+    shouldConfirmNextWaypoint = false;
+    activeTrailSiteIndex = nextIndex;
+    renderTrailModePanel(trail);
+
+    var nextSiteName = nextSite ? nextSite.name : "";
+    var goNext = confirm("Sampai di " + completedSiteName + "! Lanjut ke tujuan berikutnya: " + nextSiteName + "?");
+    if (goNext && nextSite) {
+      customRouteTargetId = nextSite.id;
+      lastRouteTargetId = null;
+      setTimeout(function() {
+        if (!isSimulatingWalk) {
+          toggleWalkSimulation();
+        }
+      }, 800);
+    }
+  } else {
+    activeTrailSiteIndex = nextIndex;
+    renderTrailModePanel(trail);
+    if (nextSite && customRouteTargetId !== nextSite.id) {
+      customRouteTargetId = nextSite.id;
+      lastRouteTargetId = null;
+      updateJelajahPlayer(currentLat, currentLon);
     }
   }
+}
+
+function logActivity(type, message) {
+  if (!currentExplorerName) return;
+  var key = "jejakdeli_activities_" + currentExplorerName;
+  var logs = [];
+  try {
+    var raw = localStorage.getItem(key);
+    if (raw) logs = JSON.parse(raw);
+  } catch (e) {}
+
+  var now = new Date();
+  var timeStr = now.getHours().toString().padStart(2, "0") + ":" +
+                now.getMinutes().toString().padStart(2, "0") + ":" +
+                now.getSeconds().toString().padStart(2, "0");
+  
+  logs.unshift({
+    type: type,
+    message: message,
+    time: timeStr
+  });
+
+  if (logs.length > 50) {
+    logs = logs.slice(0, 50);
+  }
+
+  localStorage.setItem(key, JSON.stringify(logs));
+  renderActivityLog();
+}
+
+function renderActivityLog() {
+  var list = document.getElementById("activityLogList");
+  if (!list) return;
+  list.innerHTML = "";
+  if (!currentExplorerName) {
+    list.innerHTML = '<div class="history-empty">Silakan login untuk melihat log.</div>';
+    return;
+  }
+  var key = "jejakdeli_activities_" + currentExplorerName;
+  var logs = [];
+  try {
+    var raw = localStorage.getItem(key);
+    if (raw) logs = JSON.parse(raw);
+  } catch (e) {}
+
+  if (logs.length === 0) {
+    list.innerHTML = '<div class="history-empty">Belum ada aktivitas tercatat.</div>';
+    return;
+  }
+
+  for (var i = 0; i < logs.length; i++) {
+    var log = logs[i];
+    var li = document.createElement("li");
+    li.style.display = "flex";
+    li.style.justifyContent = "space-between";
+    li.style.alignItems = "center";
+    li.style.padding = "6px 10px";
+    li.style.borderBottom = "1px solid var(--border)";
+    li.style.fontSize = "12px";
+
+    var icon = "[INFO]";
+    if (log.type === "xp") icon = "[XP]";
+    else if (log.type === "visit") icon = "[KUNJUNGAN]";
+    else if (log.type === "trail") icon = "[TRAIL]";
+    else if (log.type === "badge") icon = "[BADGE]";
+
+    li.innerHTML = '<div style="display:flex; align-items:center; gap:8px;">' +
+                   '<span style="font-size:12px; font-weight:bold; color:var(--teal);">' + icon + '</span>' +
+                   '<span>' + log.message + '</span>' +
+                   '</div>' +
+                   '<span style="color:var(--text-light); font-size:10px; font-family:monospace;">' + log.time + '</span>';
+    list.appendChild(li);
+  }
+}
+
+var html5QrCodeInstance = null;
+var isTorchOn = false;
+
+function openQrScanner() {
+  document.getElementById("qrScannerModal").style.display = "flex";
+  if (!html5QrCodeInstance) {
+    html5QrCodeInstance = new Html5Qrcode("qr-reader");
+  }
+  isTorchOn = false;
+  document.getElementById("btn-toggle-torch").textContent = "Senter: OFF";
+  var config = { fps: 10, qrbox: { width: 250, height: 250 } };
+  html5QrCodeInstance.start(
+    { facingMode: "environment" },
+    config,
+    function (decodedText) {
+      closeQrScanner();
+      verifyQrVisit(decodedText);
+    },
+    function () {}
+  ).catch(function (err) {
+    showToast("Kamera Gagal", "Tidak dapat mengakses kamera: " + err, "error");
+    closeQrScanner();
+  });
+}
+
+function openQrScannerFromQuiz() {
+  closeQuizModal();
+  openQrScanner();
+}
+
+function closeQrScanner() {
+  document.getElementById("qrScannerModal").style.display = "none";
+  if (html5QrCodeInstance && html5QrCodeInstance.isScanning) {
+    html5QrCodeInstance.stop().then(function () {
+      isTorchOn = false;
+    }).catch(function () {});
+  }
+}
+
+function toggleFlashlight() {
+  if (html5QrCodeInstance && html5QrCodeInstance.isScanning) {
+    var nextState = !isTorchOn;
+    html5QrCodeInstance.applyVideoConstraints({
+      advanced: [{ torch: nextState }]
+    }).then(function () {
+      isTorchOn = nextState;
+      document.getElementById("btn-toggle-torch").textContent = "Senter: " + (isTorchOn ? "ON" : "OFF");
+    }).catch(function () {
+      showToast("Senter", "Senter tidak didukung pada perangkat ini.", "info");
+    });
+  }
+}
+
+function verifyQrVisit(token) {
+  fetch("/api/visit/qr?token=" + encodeURIComponent(token), {
+    method: "POST"
+  })
+    .then(function (r) {
+      if (r.status === 401) {
+        showAuth();
+        return Promise.reject("Unauthorized");
+      }
+      return r.json().then(function (data) { return { status: r.status, body: data }; });
+    })
+    .then(function (res) {
+      if (res.status === 200) {
+        var d = res.body;
+        showToast("Kunjungan Berhasil", d.message, "success");
+        logActivity("visit", "Mengunjungi situs " + d.site.name + " via QR Code.");
+        if (d.leveledUp) {
+          showToast("Naik Level!", "Selamat! Level Anda naik menjadi Level " + d.newLevel, "info");
+          logActivity("system", "Naik level ke Level " + d.newLevel + "!");
+        }
+        handleNewBadges(d.newBadges);
+        if (customRouteTargetId === d.site.id) {
+          customRouteTargetId = null;
+        }
+        loadExplorerState();
+      } else {
+        showToast("Eror Kunjungan", res.body.message || "Gagal memproses QR Code.", "error");
+      }
+    })
+    .catch(function (err) {
+      if (err !== "Unauthorized") {
+        showToast("Eror", "Terjadi kesalahan saat memverifikasi QR Code.", "error");
+      }
+    });
 }

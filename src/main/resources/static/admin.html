@@ -921,72 +921,14 @@
         <aside class="sidebar">
             <div class="sidebar-section-label">Menu</div>
             <ul class="sidebar-menu">
-                <li>
-                    <a
-                        href="#"
-                        class="active"
-                        data-sec="dashboard"
-                        onclick="
-                            nav('dashboard');
-                            return false;
-                        "
-                        >Dashboard</a
-                    >
-                </li>
-                <li>
-                    <a
-                        href="#"
-                        data-sec="sites"
-                        onclick="
-                            nav('sites');
-                            return false;
-                        "
-                        >Kelola Situs</a
-                    >
-                </li>
-                <li>
-                    <a
-                        href="#"
-                        data-sec="trails"
-                        onclick="
-                            nav('trails');
-                            return false;
-                        "
-                        >Kelola Trail</a
-                    >
-                </li>
-                <li>
-                    <a
-                        href="#"
-                        data-sec="badges"
-                        onclick="
-                            nav('badges');
-                            return false;
-                        "
-                        >Kelola Badge</a
-                    >
-                </li>
-                <li>
-                    <a
-                        href="#"
-                        data-sec="users"
-                        onclick="
-                            nav('users');
-                            return false;
-                        "
-                        >Daftar Pengguna</a
-                    >
-                </li>
+                <li><a href="#" class="active" data-sec="dashboard" onclick="nav('dashboard');return false;">Dashboard</a></li>
+                <li><a href="#" data-sec="sites" onclick="nav('sites');return false;">Kelola Situs</a></li>
+                <li><a href="#" data-sec="trails" onclick="nav('trails');return false;">Kelola Trail</a></li>
+                <li><a href="#" data-sec="badges" onclick="nav('badges');return false;">Kelola Badge</a></li>
+                <li><a href="#" data-sec="users" onclick="nav('users');return false;">Daftar Pengguna</a></li>
             </ul>
             <div class="sidebar-footer">
-                <a
-                    href="#"
-                    onclick="
-                        goToApp();
-                        return false;
-                    "
-                    >Ke Aplikasi</a
-                >
+                <a href="#" onclick="goToApp();return false;">Ke Aplikasi</a>
             </div>
         </aside>
 
@@ -1321,6 +1263,29 @@
                         ></textarea>
                     </div>
 
+                    <div class="section-divider">QR Code Verifikasi</div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label">Token QR Code</label>
+                            <input
+                                type="text"
+                                id="f-siteQrToken"
+                                class="form-ctrl"
+                                placeholder="cth: qr-maimun"
+                                oninput="generateQrPreview()"
+                            />
+                            <p class="form-hint">
+                                Token unik untuk verifikasi check-in situs via QR Code.
+                            </p>
+                        </div>
+                        <div class="form-group" style="display:flex; flex-direction:column; align-items:center; justify-content:center;">
+                            <div id="qrcode-display"></div>
+                            <button type="button" class="btn btn-ghost btn-xs" id="btn-download-qr" onclick="downloadQrCode()" style="margin-top: 8px;">
+                                Unduh QR Code
+                            </button>
+                        </div>
+                    </div>
+
                     <div class="section-divider">Lokasi di Peta</div>
                     <p class="form-hint" style="margin-bottom: 8px">
                         Klik pada peta untuk menentukan koordinat, atau ketik
@@ -1561,979 +1526,736 @@
      SCRIPTS
 ═══════════════════════════════════════ -->
         <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
         <script>
-                        /* ─── STATE ─── */
-                        var allSites = [];
-                        var allTrails = [];
-                        var editingSiteId = null;
-                        var editingTrailId = null;
-                        var editingBadgeId = null;
-                        var siteMap = null;
-                        var siteMarker = null;
+            var allSites = [];
+            var allTrails = [];
+            var editingSiteId = null;
+            var editingTrailId = null;
+            var editingBadgeId = null;
+            var siteMap = null;
+            var siteMarker = null;
 
-                        /* ─── INIT ─── */
-                        document.addEventListener("DOMContentLoaded", function () {
-                            fetch("/api/admin/check", { credentials: "include" })
-                                .then(function (r) {
-                                    return r.json();
-                                })
-                                .then(function (d) {
-                                    if (!d.isAdmin) {
-                                        window.location.href = "/index.html";
-                                        return;
-                                    }
-                                    var n = d.username || "Admin";
-                                    document.getElementById("adminName").textContent = n;
-                                    document.getElementById("adminAvatar").textContent = n
-                                        .charAt(0)
-                                        .toUpperCase();
-                                    loadDashboard();
-                                })
-                                .catch(function () {
-                                    window.location.href = "/index.html";
-                                });
+            function adminFetch(url, options) {
+                options = options || {};
+                options.credentials = "include";
+                return fetch(url, options).then(function (r) {
+                    if (r.status === 403) {
+                        return r.json().then(function (body) {
+                            throw new Error(body.message || "Akses ditolak.");
                         });
+                    }
+                    if (!r.ok) {
+                        throw new Error("HTTP " + r.status);
+                    }
+                    return r.json();
+                });
+            }
 
-                        /* ─── NAVIGATION ─── */
-                        function nav(sec) {
-                            ["dashboard", "sites", "trails", "badges", "users"].forEach(
-                                function (s) {
-                                    document
-                                        .getElementById("sec-" + s)
-                                        .classList.toggle("hidden", s !== sec);
-                                },
-                            );
-                            document
-                                .querySelectorAll(".sidebar-menu a")
-                                .forEach(function (a) {
-                                    a.classList.toggle("active", a.dataset.sec === sec);
-                                });
-                            if (sec === "sites") loadSites();
-                            if (sec === "trails") loadTrails();
-                            if (sec === "badges") loadBadges();
-                            if (sec === "users") loadUsers();
-                            window.scrollTo(0, 0);
-                        }
-
-                        /* ─── TOAST ─── */
-                        function toast(title, msg, type) {
-                            type = type || "info";
-                            var el = document.createElement("div");
-                            el.className = "toast " + type;
-                            el.innerHTML =
-                                '<div class="toast-msg"><strong>' +
-                                esc(title) +
-                                "</strong><span>" +
-                                esc(msg) +
-                                "</span></div>";
-                            document.getElementById("toastBox").appendChild(el);
-                            setTimeout(function () {
-                                el.style.transition = "opacity .3s";
-                                el.style.opacity = "0";
-                                setTimeout(function () {
-                                    el.remove();
-                                }, 300);
-                            }, 3500);
-                        }
-
-                        /* ─── ESCAPE HTML ─── */
-                        function esc(s) {
-                            return String(s == null ? "" : s)
-                                .replace(/&/g, "&amp;")
-                                .replace(/</g, "&lt;")
-                                .replace(/>/g, "&gt;")
-                                .replace(/"/g, "&quot;");
-                        }
-
-                        /* ─── EMPTY ROW ─── */
-                        function emptyRow(cols, msg) {
-                            return (
-                                '<tr><td colspan="' +
-                                cols +
-                                '"><div class="empty"><div class="empty-ico">📭</div><p>' +
-                                esc(msg) +
-                                "</p></div></td></tr>"
-                            );
-                        }
-
-                        /* ─── DASHBOARD ─── */
-                        function loadDashboard() {
-                            Promise.all([
-                                fetch("/api/admin/sites", { credentials: "include" }).then(
-                                    function (r) {
-                                        return r.json();
-                                    },
-                                ),
-                                fetch("/api/admin/trails", { credentials: "include" }).then(
-                                    function (r) {
-                                        return r.json();
-                                    },
-                                ),
-                                fetch("/api/admin/badges", { credentials: "include" }).then(
-                                    function (r) {
-                                        return r.json();
-                                    },
-                                ),
-                                fetch("/api/admin/users", { credentials: "include" }).then(
-                                    function (r) {
-                                        return r.json();
-                                    },
-                                ),
-                            ])
-                                .then(function (results) {
-                                    allSites = Array.isArray(results[0]) ? results[0] : [];
-                                    allTrails = Array.isArray(results[1]) ? results[1] : [];
-                                    document.getElementById("ds-sites").textContent =
-                                        allSites.length;
-                                    document.getElementById("ds-trails").textContent =
-                                        allTrails.length;
-                                    document.getElementById("ds-badges").textContent =
-                                        Array.isArray(results[2]) ? results[2].length : "—";
-                                    document.getElementById("ds-users").textContent =
-                                        Array.isArray(results[3]) ? results[3].length : "—";
-                                })
-                                .catch(function () {
-                                    toast(
-                                        "Gagal",
-                                        "Tidak dapat memuat data dashboard.",
-                                        "error",
-                                    );
-                                });
-                        }
-
-                        /* ─── NAVIGATION TO APP ─── */
-                        function goToApp() {
+            document.addEventListener("DOMContentLoaded", function () {
+                adminFetch("/api/admin/check")
+                    .then(function (d) {
+                        if (!d.isAdmin) {
                             window.location.href = "/index.html";
+                            return;
                         }
+                        var n = d.username || "Admin";
+                        document.getElementById("adminName").textContent = n;
+                        document.getElementById("adminAvatar").textContent = n.charAt(0).toUpperCase();
+                        loadDashboard();
+                    })
+                    .catch(function () {
+                        window.location.href = "/index.html";
+                    });
+            });
 
-                        /* ─── LOGOUT ─── */
-                        function doLogout() {
-                            fetch("/api/auth/logout", {
-                                method: "POST",
-                                credentials: "include",
-                            }).finally(function () {
-                                window.location.href = "/index.html";
-                            });
+            function nav(sec) {
+                var sections = ["dashboard", "sites", "trails", "badges", "users"];
+                for (var i = 0; i < sections.length; i++) {
+                    var el = document.getElementById("sec-" + sections[i]);
+                    if (el) {
+                        if (sections[i] === sec) {
+                            el.classList.remove("hidden");
+                        } else {
+                            el.classList.add("hidden");
                         }
+                    }
+                }
+                var links = document.querySelectorAll(".sidebar-menu a");
+                for (var j = 0; j < links.length; j++) {
+                    if (links[j].getAttribute("data-sec") === sec) {
+                        links[j].classList.add("active");
+                    } else {
+                        links[j].classList.remove("active");
+                    }
+                }
+                if (sec === "dashboard") loadDashboard();
+                if (sec === "sites") loadSites();
+                if (sec === "trails") loadTrails();
+                if (sec === "badges") loadBadges();
+                if (sec === "users") loadUsers();
+                window.scrollTo(0, 0);
+            }
+
+            function toast(title, msg, type) {
+                type = type || "info";
+                var el = document.createElement("div");
+                el.className = "toast " + type;
+                el.innerHTML = '<div class="toast-msg"><strong>' + esc(title) + "</strong><span>" + esc(msg) + "</span></div>";
+                document.getElementById("toastBox").appendChild(el);
+                setTimeout(function () {
+                    el.style.transition = "opacity .3s";
+                    el.style.opacity = "0";
+                    setTimeout(function () { el.remove(); }, 300);
+                }, 3500);
+            }
+
+            function esc(s) {
+                return String(s == null ? "" : s)
+                    .replace(/&/g, "&amp;")
+                    .replace(/</g, "&lt;")
+                    .replace(/>/g, "&gt;")
+                    .replace(/"/g, "&quot;");
+            }
+
+            function emptyRow(cols, msg) {
+                return '<tr><td colspan="' + cols + '"><div class="empty"><div class="empty-ico"></div><p>' + esc(msg) + "</p></div></td></tr>";
+            }
+
+            function loadDashboard() {
+                Promise.all([
+                    adminFetch("/api/admin/sites").catch(function () { return []; }),
+                    adminFetch("/api/admin/trails").catch(function () { return []; }),
+                    adminFetch("/api/admin/badges").catch(function () { return []; }),
+                    adminFetch("/api/admin/users").catch(function () { return []; })
+                ]).then(function (results) {
+                    allSites = Array.isArray(results[0]) ? results[0] : [];
+                    allTrails = Array.isArray(results[1]) ? results[1] : [];
+                    var badges = Array.isArray(results[2]) ? results[2] : [];
+                    var users = Array.isArray(results[3]) ? results[3] : [];
+                    document.getElementById("ds-sites").textContent = allSites.length;
+                    document.getElementById("ds-trails").textContent = allTrails.length;
+                    document.getElementById("ds-badges").textContent = badges.length;
+                    document.getElementById("ds-users").textContent = users.length;
+                }).catch(function () {
+                    toast("Gagal", "Tidak dapat memuat data dashboard.", "error");
+                });
+            }
+
+            function goToApp() {
+                window.location.href = "/index.html";
+            }
+
+            function doLogout() {
+                fetch("/api/auth/logout", { method: "POST", credentials: "include" })
+                    .finally(function () { window.location.href = "/index.html"; });
+            }
 
                         /* ══════════════════════════════════════
                KELOLA SITUS
             ══════════════════════════════════════ */
-                        function loadSites() {
-                            document.getElementById("tb-sites").innerHTML =
-                                '<tr class="spinner-row"><td colspan="6"><span class="spinner"></span>Memuat…</td></tr>';
-                            fetch("/api/admin/sites", { credentials: "include" })
-                                .then(function (r) {
-                                    return r.json();
-                                })
-                                .then(function (data) {
-                                    allSites = Array.isArray(data) ? data : [];
-                                    var tb = document.getElementById("tb-sites");
-                                    if (!allSites.length) {
-                                        tb.innerHTML = emptyRow(6, "Belum ada situs.");
-                                        return;
-                                    }
-                                    tb.innerHTML = allSites
-                                        .map(function (s) {
-                                            return (
-                                                "<tr>" +
-                                                "<td><code>" + esc(s.id) + "</code></td>" +
-                                                "<td><strong>" + esc(s.name) + "</strong></td>" +
-                                                '<td style="color:var(--text-mid)">' + esc(s.era || "—") + "</td>" +
-                                                "<td>" + statusPill(s.status) + "</td>" +
-                                                '<td style="font-size:12px;color:var(--text-light);font-family:monospace">' +
-                                                (s.latitude != null ? s.latitude.toFixed(4) : "—") + ", " +
-                                                (s.longitude != null ? s.longitude.toFixed(4) : "—") + "</td>" +
-                                                '<td><div class="actions">' +
-                                                '<button class="btn btn-yellow btn-xs" onclick=\'openSiteModal(' + JSON.stringify(JSON.stringify(s)) + ")'>Edit</button>" +
-                                                '<button class="btn btn-danger btn-xs" onclick="delSite(\'" + esc(s.id) + "')\">Hapus</button>" +
-                                                "</div></td>" +
-                                                "</tr>"
-                                            );
-                                        })
-                                        .join("");
-                                })
-                                .catch(function () {
-                                    toast("Gagal", "Tidak dapat memuat situs.", "error");
-                                });
+            function loadSites() {
+                var tb = document.getElementById("tb-sites");
+                tb.innerHTML = '<tr class="spinner-row"><td colspan="6"><span class="spinner"></span>Memuat...</td></tr>';
+                adminFetch("/api/admin/sites")
+                    .then(function (data) {
+                        allSites = Array.isArray(data) ? data : [];
+                        if (!allSites.length) {
+                            tb.innerHTML = emptyRow(6, "Belum ada situs.");
+                            return;
                         }
-
-                        function statusPill(st) {
-                            var m = {
-                                "Cagar Budaya": "pill-teal",
-                                Museum: "pill-yellow",
-                                "Taman Bersejarah": "pill-green",
-                                "Tempat Ibadah Bersejarah": "pill-green",
-                            };
-                            return (
-                                '<span class="pill ' +
-                                (m[st] || "pill-gray") +
-                                '">' +
-                                esc(st || "—") +
-                                "</span>"
-                            );
+                        var html = "";
+                        for (var i = 0; i < allSites.length; i++) {
+                            var s = allSites[i];
+                            var coordText = (s.latitude != null ? s.latitude.toFixed(4) : "-") + ", " + (s.longitude != null ? s.longitude.toFixed(4) : "-");
+                            var jsonData = JSON.stringify(JSON.stringify(s));
+                            html += "<tr>";
+                            html += "<td><code>" + esc(s.id) + "</code></td>";
+                            html += "<td><strong>" + esc(s.name) + "</strong></td>";
+                            html += '<td style="color:var(--text-mid)">' + esc(s.era || "-") + "</td>";
+                            html += "<td>" + statusPill(s.status) + "</td>";
+                            html += '<td style="font-size:12px;color:var(--text-light);font-family:monospace">' + coordText + "</td>";
+                            html += '<td><div class="actions">';
+                            html += '<button class="btn btn-yellow btn-xs" onclick=\'openSiteModal(' + jsonData + ')\'>Edit</button>';
+                            html += '<button class="btn btn-danger btn-xs" onclick="delSite(\'' + esc(s.id) + '\')">Hapus</button>';
+                            html += "</div></td>";
+                            html += "</tr>";
                         }
+                        tb.innerHTML = html;
+                    })
+                    .catch(function (err) {
+                        tb.innerHTML = emptyRow(6, "Gagal memuat data situs.");
+                        toast("Gagal", err.message || "Tidak dapat memuat situs.", "error");
+                    });
+            }
 
-                        function openSiteModal(jsonStr) {
-                            var s = jsonStr ? JSON.parse(jsonStr) : null;
-                            editingSiteId = s ? s.id : null;
+            function statusPill(st) {
+                var m = {
+                    "Cagar Budaya": "pill-teal",
+                    "Museum": "pill-yellow",
+                    "Taman Bersejarah": "pill-green",
+                    "Tempat Ibadah Bersejarah": "pill-green"
+                };
+                return '<span class="pill ' + (m[st] || "pill-gray") + '">' + esc(st || "-") + "</span>";
+            }
 
-                            document.getElementById("m-site-title").textContent = s
-                                ? "Edit Situs — " + s.id
-                                : "Tambah Situs Baru";
-                            document.getElementById("f-siteId").value = s ? s.id : "";
-                            document.getElementById("f-siteId").disabled = !!s;
-                            document.getElementById("f-siteName").value = s ? s.name : "";
-                            document.getElementById("f-siteEra").value = s
-                                ? s.era || ""
-                                : "";
-                            document.getElementById("f-siteStatus").value = s
-                                ? s.status || ""
-                                : "";
-                            document.getElementById("f-siteImg").value = s
-                                ? s.imageUrl || ""
-                                : "";
-                            document.getElementById("f-siteDesc").value = s
-                                ? s.description || ""
-                                : "";
-                            document.getElementById("f-siteLat").value =
-                                s && s.latitude != null ? s.latitude : "";
-                            document.getElementById("f-siteLng").value =
-                                s && s.longitude != null ? s.longitude : "";
+            function openSiteModal(jsonStr) {
+                var s = jsonStr ? JSON.parse(jsonStr) : null;
+                editingSiteId = s ? s.id : null;
+                document.getElementById("m-site-title").textContent = s ? "Edit Situs - " + s.id : "Tambah Situs Baru";
+                document.getElementById("f-siteId").value = s ? s.id : "";
+                document.getElementById("f-siteId").disabled = !!s;
+                document.getElementById("f-siteName").value = s ? s.name : "";
+                document.getElementById("f-siteEra").value = s ? (s.era || "") : "";
+                document.getElementById("f-siteStatus").value = s ? (s.status || "") : "";
+                document.getElementById("f-siteImg").value = s ? (s.imageUrl || "") : "";
+                document.getElementById("f-siteDesc").value = s ? (s.description || "") : "";
+                document.getElementById("f-siteQrToken").value = s ? (s.qrCodeToken || "") : "";
+                document.getElementById("f-siteLat").value = (s && s.latitude != null) ? s.latitude : "";
+                document.getElementById("f-siteLng").value = (s && s.longitude != null) ? s.longitude : "";
+                var q = (s && s.quiz) ? s.quiz : {};
+                document.getElementById("f-quizQ").value = q.questionText || "";
+                document.getElementById("f-quizA").value = q.optionA || "";
+                document.getElementById("f-quizB").value = q.optionB || "";
+                document.getElementById("f-quizC").value = q.optionC || "";
+                document.getElementById("f-quizD").value = q.optionD || "";
+                document.getElementById("f-quizCorrect").value = q.correctOption || "A";
+                document.getElementById("m-site").classList.add("open");
+                generateQrPreview();
+                setTimeout(function () { initSiteMap(s); }, 180);
+            }
 
-                            var q = s && s.quiz ? s.quiz : {};
-                            document.getElementById("f-quizQ").value = q.questionText || "";
-                            document.getElementById("f-quizA").value = q.optionA || "";
-                            document.getElementById("f-quizB").value = q.optionB || "";
-                            document.getElementById("f-quizC").value = q.optionC || "";
-                            document.getElementById("f-quizD").value = q.optionD || "";
-                            document.getElementById("f-quizCorrect").value =
-                                q.correctOption || "A";
-
-                            document.getElementById("m-site").classList.add("open");
-                            setTimeout(function () {
-                                initSiteMap(s);
-                            }, 180);
+            function initSiteMap(s) {
+                if (siteMap) {
+                    siteMap.remove();
+                    siteMap = null;
+                    siteMarker = null;
+                }
+                var lat = (s && s.latitude != null) ? s.latitude : 3.5833;
+                var lng = (s && s.longitude != null) ? s.longitude : 98.6833;
+                siteMap = L.map("adminSiteMap").setView([lat, lng], 15);
+                L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+                    attribution: "OpenStreetMap",
+                    maxZoom: 19
+                }).addTo(siteMap);
+                if (s && s.latitude != null) {
+                    siteMarker = L.marker([lat, lng]).addTo(siteMap);
+                }
+                siteMap.on("click", function (e) {
+                    document.getElementById("f-siteLat").value = e.latlng.lat.toFixed(7);
+                    document.getElementById("f-siteLng").value = e.latlng.lng.toFixed(7);
+                    if (siteMarker) siteMarker.setLatLng(e.latlng);
+                    else siteMarker = L.marker(e.latlng).addTo(siteMap);
+                });
+                var coordIds = ["f-siteLat", "f-siteLng"];
+                for (var ci = 0; ci < coordIds.length; ci++) {
+                    var coordEl = document.getElementById(coordIds[ci]);
+                    coordEl.removeAttribute("readonly");
+                    coordEl.addEventListener("input", function () {
+                        var la = parseFloat(document.getElementById("f-siteLat").value);
+                        var ln = parseFloat(document.getElementById("f-siteLng").value);
+                        if (!isNaN(la) && !isNaN(ln)) {
+                            var ll = [la, ln];
+                            siteMap.setView(ll, siteMap.getZoom());
+                            if (siteMarker) siteMarker.setLatLng(ll);
+                            else siteMarker = L.marker(ll).addTo(siteMap);
                         }
+                    });
+                }
+            }
 
-                        function initSiteMap(s) {
-                            if (siteMap) {
-                                siteMap.remove();
-                                siteMap = null;
-                                siteMarker = null;
+            function useGPS() {
+                if (!navigator.geolocation) {
+                    toast("GPS", "Browser tidak mendukung geolokasi.", "error");
+                    return;
+                }
+                navigator.geolocation.getCurrentPosition(
+                    function (pos) {
+                        var la = pos.coords.latitude;
+                        var ln = pos.coords.longitude;
+                        document.getElementById("f-siteLat").value = la.toFixed(7);
+                        document.getElementById("f-siteLng").value = ln.toFixed(7);
+                        siteMap.setView([la, ln], 17);
+                        if (siteMarker) siteMarker.setLatLng([la, ln]);
+                        else siteMarker = L.marker([la, ln]).addTo(siteMap);
+                        toast("GPS", "Koordinat berhasil diambil.", "success");
+                    },
+                    function (e) {
+                        toast("GPS Error", e.message, "error");
+                    }
+                );
+            }
+
+            function closeSiteModal() {
+                document.getElementById("m-site").classList.remove("open");
+                if (siteMap) {
+                    siteMap.remove();
+                    siteMap = null;
+                    siteMarker = null;
+                }
+                editingSiteId = null;
+            }
+
+            function generateQrPreview() {
+                var qrToken = document.getElementById("f-siteQrToken").value.trim();
+                var container = document.getElementById("qrcode-display");
+                container.innerHTML = "";
+                if (qrToken) {
+                    new QRCode(container, {
+                        text: qrToken,
+                        width: 128,
+                        height: 128,
+                        correctLevel: QRCode.CorrectLevel.H
+                    });
+                    document.getElementById("btn-download-qr").style.display = "inline-flex";
+                } else {
+                    document.getElementById("btn-download-qr").style.display = "none";
+                }
+            }
+
+            function downloadQrCode() {
+                var canvas = document.getElementById("qrcode-display").querySelector("canvas");
+                if (canvas) {
+                    var imgUrl = canvas.toDataURL("image/png");
+                    var siteName = document.getElementById("f-siteName").value.trim() || "situs";
+                    var link = document.createElement("a");
+                    link.download = "QR-" + siteName.replace(/\s+/g, "-") + ".png";
+                    link.href = imgUrl;
+                    link.click();
+                } else {
+                    toast("Error", "Gagal mengunduh QR Code. Pastikan token sudah diisi.", "error");
+                }
+            }
+
+            function saveSite() {
+                var id = document.getElementById("f-siteId").value.trim();
+                var name = document.getElementById("f-siteName").value.trim();
+                if (!id || !name) {
+                    toast("Validasi", "ID dan Nama Situs wajib diisi.", "error");
+                    return;
+                }
+                var latV = document.getElementById("f-siteLat").value.trim();
+                var lngV = document.getElementById("f-siteLng").value.trim();
+                var quizQ = document.getElementById("f-quizQ").value.trim();
+                var payload = {
+                    id: id,
+                    name: name,
+                    era: document.getElementById("f-siteEra").value.trim(),
+                    status: document.getElementById("f-siteStatus").value,
+                    imageUrl: document.getElementById("f-siteImg").value.trim(),
+                    description: document.getElementById("f-siteDesc").value.trim(),
+                    qrCodeToken: document.getElementById("f-siteQrToken").value.trim(),
+                    latitude: latV ? parseFloat(latV) : null,
+                    longitude: lngV ? parseFloat(lngV) : null,
+                    quiz: quizQ ? {
+                        questionText: quizQ,
+                        optionA: document.getElementById("f-quizA").value.trim(),
+                        optionB: document.getElementById("f-quizB").value.trim(),
+                        optionC: document.getElementById("f-quizC").value.trim(),
+                        optionD: document.getElementById("f-quizD").value.trim(),
+                        correctOption: document.getElementById("f-quizCorrect").value
+                    } : null
+                };
+                var isEdit = editingSiteId !== null;
+                var url = isEdit ? "/api/admin/sites/" + editingSiteId : "/api/admin/sites";
+                fetch(url, {
+                    method: isEdit ? "PUT" : "POST",
+                    credentials: "include",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify(payload)
+                })
+                .then(function (r) {
+                    if (!r.ok) return r.text().then(function (t) { throw new Error(t); });
+                    return r.json();
+                })
+                .then(function (d) {
+                    toast("Berhasil", d.message || (isEdit ? "Situs diperbarui." : "Situs ditambahkan."), "success");
+                    closeSiteModal();
+                    loadSites();
+                    loadDashboard();
+                })
+                .catch(function (e) {
+                    toast("Error", e.message, "error");
+                });
+            }
+
+            function delSite(id) {
+                if (!confirm('Hapus situs "' + id + '"? Tindakan ini tidak dapat dibatalkan.')) return;
+                fetch("/api/admin/sites/" + id, { method: "DELETE", credentials: "include" })
+                    .then(function (r) {
+                        if (!r.ok) throw new Error("Gagal menghapus");
+                        toast("Dihapus", "Situs " + id + " berhasil dihapus.", "success");
+                        loadSites();
+                        loadDashboard();
+                    })
+                    .catch(function (e) {
+                        toast("Error", e.message, "error");
+                    });
+            }
+
+            function loadTrails() {
+                var tb = document.getElementById("tb-trails");
+                tb.innerHTML = '<tr class="spinner-row"><td colspan="5"><span class="spinner"></span>Memuat...</td></tr>';
+                Promise.all([
+                    adminFetch("/api/admin/trails").catch(function () { return []; }),
+                    adminFetch("/api/admin/sites").catch(function () { return []; })
+                ]).then(function (results) {
+                    allTrails = Array.isArray(results[0]) ? results[0] : [];
+                    allSites = Array.isArray(results[1]) ? results[1] : [];
+                    if (!allTrails.length) {
+                        tb.innerHTML = emptyRow(5, "Belum ada trail.");
+                        return;
+                    }
+                    var html = "";
+                    for (var i = 0; i < allTrails.length; i++) {
+                        var t = allTrails[i];
+                        var ids = t.siteIds || [];
+                        var namesHtml = "";
+                        for (var k = 0; k < ids.length; k++) {
+                            var found = null;
+                            for (var f = 0; f < allSites.length; f++) {
+                                if (allSites[f].id === ids[k]) { found = allSites[f]; break; }
                             }
-                            var lat = s && s.latitude != null ? s.latitude : 3.5833;
-                            var lng = s && s.longitude != null ? s.longitude : 98.6833;
-                            siteMap = L.map("adminSiteMap").setView([lat, lng], 15);
-                            L.tileLayer(
-                                "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
-                                {
-                                    attribution: "© OpenStreetMap",
-                                    maxZoom: 19,
-                                },
-                            ).addTo(siteMap);
-                            if (s && s.latitude != null) {
-                                siteMarker = L.marker([lat, lng]).addTo(siteMap);
-                            }
-                            siteMap.on("click", function (e) {
-                                document.getElementById("f-siteLat").value =
-                                    e.latlng.lat.toFixed(7);
-                                document.getElementById("f-siteLng").value =
-                                    e.latlng.lng.toFixed(7);
-                                if (siteMarker) siteMarker.setLatLng(e.latlng);
-                                else siteMarker = L.marker(e.latlng).addTo(siteMap);
-                            });
-                            // sync manual lat/lng input → peta
-                            ["f-siteLat", "f-siteLng"].forEach(function (id) {
-                                document.getElementById(id).removeAttribute("readonly");
-                                document
-                                    .getElementById(id)
-                                    .addEventListener("input", function () {
-                                        var la = parseFloat(
-                                            document.getElementById("f-siteLat").value,
-                                        );
-                                        var ln = parseFloat(
-                                            document.getElementById("f-siteLng").value,
-                                        );
-                                        if (!isNaN(la) && !isNaN(ln)) {
-                                            var ll = [la, ln];
-                                            siteMap.setView(ll, siteMap.getZoom());
-                                            if (siteMarker) siteMarker.setLatLng(ll);
-                                            else siteMarker = L.marker(ll).addTo(siteMap);
-                                        }
-                                    });
-                            });
+                            if (k > 0) namesHtml += ' <span style="color:var(--yellow);font-weight:700">-></span> ';
+                            namesHtml += '<span style="white-space:nowrap"><span class="pill pill-gray" style="font-size:10px">' + (k + 1) + '</span> ' + esc(found ? found.name : ids[k]) + '</span>';
                         }
+                        if (!namesHtml) namesHtml = '<span style="color:var(--text-light)">-</span>';
+                        var jsonData = JSON.stringify(JSON.stringify(t));
+                        html += "<tr>";
+                        html += "<td><code>" + esc(t.id) + "</code></td>";
+                        html += "<td><strong>" + esc(t.name) + "</strong></td>";
+                        html += '<td style="text-align:center"><span class="pill pill-teal">' + ids.length + "</span></td>";
+                        html += '<td style="font-size:12.5px;line-height:1.8">' + namesHtml + "</td>";
+                        html += '<td><div class="actions">';
+                        html += '<button class="btn btn-yellow btn-xs" onclick=\'openTrailModal(' + jsonData + ')\'>Edit</button>';
+                        html += '<button class="btn btn-danger btn-xs" onclick="delTrail(\'' + esc(t.id) + '\')">Hapus</button>';
+                        html += "</div></td>";
+                        html += "</tr>";
+                    }
+                    tb.innerHTML = html;
+                }).catch(function (err) {
+                    tb.innerHTML = emptyRow(5, "Gagal memuat data trail.");
+                    toast("Gagal", err.message || "Tidak dapat memuat trail.", "error");
+                });
+            }
 
-                        function useGPS() {
-                            if (!navigator.geolocation) {
-                                toast("GPS", "Browser tidak mendukung geolokasi.", "error");
-                                return;
-                            }
-                            navigator.geolocation.getCurrentPosition(
-                                function (pos) {
-                                    var la = pos.coords.latitude,
-                                        ln = pos.coords.longitude;
-                                    document.getElementById("f-siteLat").value =
-                                        la.toFixed(7);
-                                    document.getElementById("f-siteLng").value =
-                                        ln.toFixed(7);
-                                    siteMap.setView([la, ln], 17);
-                                    if (siteMarker) siteMarker.setLatLng([la, ln]);
-                                    else siteMarker = L.marker([la, ln]).addTo(siteMap);
-                                    toast("GPS", "Koordinat berhasil diambil.", "success");
-                                },
-                                function (e) {
-                                    toast("GPS Error", e.message, "error");
-                                },
-                            );
+            function openTrailModal(jsonStr) {
+                var t = jsonStr ? JSON.parse(jsonStr) : null;
+                editingTrailId = t ? t.id : null;
+                document.getElementById("m-trail-title").textContent = t ? "Edit Trail - " + t.id : "Tambah Trail Baru";
+                document.getElementById("f-trailId").value = t ? t.id : "";
+                document.getElementById("f-trailId").disabled = !!t;
+                document.getElementById("f-trailName").value = t ? t.name : "";
+                document.getElementById("m-trail").classList.add("open");
+                var ready = allSites.length > 0
+                    ? Promise.resolve(allSites)
+                    : adminFetch("/api/admin/sites").then(function (d) { allSites = Array.isArray(d) ? d : []; return allSites; });
+                ready.then(function () {
+                    buildChecklist(t ? (t.siteIds || []) : []);
+                });
+            }
+
+            function buildChecklist(selectedIds) {
+                var box = document.getElementById("trail-checklist");
+                if (!allSites.length) {
+                    box.innerHTML = '<div style="padding:16px;color:var(--text-light)">Tidak ada situs tersedia.</div>';
+                    return;
+                }
+                var sel = [];
+                for (var si = 0; si < selectedIds.length; si++) {
+                    for (var sj = 0; sj < allSites.length; sj++) {
+                        if (allSites[sj].id === selectedIds[si]) { sel.push(allSites[sj]); break; }
+                    }
+                }
+                var unsel = [];
+                for (var ui = 0; ui < allSites.length; ui++) {
+                    var isSelected = false;
+                    for (var uj = 0; uj < selectedIds.length; uj++) {
+                        if (allSites[ui].id === selectedIds[uj]) { isSelected = true; break; }
+                    }
+                    if (!isSelected) unsel.push(allSites[ui]);
+                }
+                var ordered = sel.concat(unsel);
+                var html = "";
+                for (var oi = 0; oi < ordered.length; oi++) {
+                    var s = ordered[oi];
+                    var checked = false;
+                    for (var ci = 0; ci < selectedIds.length; ci++) {
+                        if (selectedIds[ci] === s.id) { checked = true; break; }
+                    }
+                    html += '<div class="checklist-item" data-sid="' + esc(s.id) + '">';
+                    html += '<input type="checkbox" id="chk-' + esc(s.id) + '" ' + (checked ? 'checked' : '') + ' onchange="updatePreview()">';
+                    html += '<label for="chk-' + esc(s.id) + '">' + esc(s.name) + ' <small style="color:var(--text-light)">(' + esc(s.id) + ')</small></label>';
+                    html += '<button class="order-btn" onclick="moveItem(\'' + esc(s.id) + '\',-1)" title="Naik">UP</button>';
+                    html += '<button class="order-btn" onclick="moveItem(\'' + esc(s.id) + '\',1)" title="Turun">DN</button>';
+                    html += "</div>";
+                }
+                box.innerHTML = html;
+                updatePreview();
+            }
+
+            function moveItem(sid, dir) {
+                var box = document.getElementById("trail-checklist");
+                var items = [];
+                var children = box.querySelectorAll(".checklist-item");
+                for (var mi = 0; mi < children.length; mi++) items.push(children[mi]);
+                var idx = -1;
+                for (var fi = 0; fi < items.length; fi++) {
+                    if (items[fi].getAttribute("data-sid") === sid) { idx = fi; break; }
+                }
+                if (idx < 0) return;
+                var ni = idx + dir;
+                if (ni < 0 || ni >= items.length) return;
+                if (dir === -1) box.insertBefore(items[idx], items[ni]);
+                else box.insertBefore(items[ni], items[idx]);
+                updatePreview();
+            }
+
+            function updatePreview() {
+                var box = document.getElementById("trail-checklist");
+                var prev = document.getElementById("route-preview");
+                var items = box.querySelectorAll(".checklist-item");
+                var sel = [];
+                for (var pi = 0; pi < items.length; pi++) {
+                    if (items[pi].querySelector("input").checked) sel.push(items[pi]);
+                }
+                if (!sel.length) {
+                    prev.textContent = "Belum ada situs yang dipilih.";
+                    return;
+                }
+                var previewHtml = "";
+                for (var ri = 0; ri < sel.length; ri++) {
+                    var sid = sel[ri].getAttribute("data-sid");
+                    var found = null;
+                    for (var rj = 0; rj < allSites.length; rj++) {
+                        if (allSites[rj].id === sid) { found = allSites[rj]; break; }
+                    }
+                    var siteName = found ? found.name : sid;
+                    previewHtml += '<span class="pill pill-gray" style="font-size:10px">' + (ri + 1) + '</span> ' + esc(siteName);
+                    if (ri < sel.length - 1) previewHtml += ' <span style="color:var(--yellow);font-weight:700">-></span> ';
+                }
+                prev.innerHTML = previewHtml;
+            }
+
+            function closeTrailModal() {
+                document.getElementById("m-trail").classList.remove("open");
+                editingTrailId = null;
+            }
+
+            function saveTrail() {
+                var id = document.getElementById("f-trailId").value.trim();
+                var name = document.getElementById("f-trailName").value.trim();
+                if (!id || !name) {
+                    toast("Validasi", "ID dan Nama Trail wajib diisi.", "error");
+                    return;
+                }
+                var checkItems = document.getElementById("trail-checklist").querySelectorAll(".checklist-item");
+                var siteIds = [];
+                for (var ti = 0; ti < checkItems.length; ti++) {
+                    if (checkItems[ti].querySelector("input").checked) {
+                        siteIds.push(checkItems[ti].getAttribute("data-sid"));
+                    }
+                }
+                var isEdit = editingTrailId !== null;
+                var url = isEdit ? "/api/admin/trails/" + editingTrailId : "/api/admin/trails";
+                fetch(url, {
+                    method: isEdit ? "PUT" : "POST",
+                    credentials: "include",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ id: id, name: name, siteIds: siteIds })
+                })
+                .then(function (r) {
+                    if (!r.ok) return r.text().then(function (t) { throw new Error(t); });
+                    return r.json();
+                })
+                .then(function (d) {
+                    toast("Berhasil", d.message || "Trail disimpan.", "success");
+                    closeTrailModal();
+                    loadTrails();
+                    loadDashboard();
+                })
+                .catch(function (e) {
+                    toast("Error", e.message, "error");
+                });
+            }
+
+            function delTrail(id) {
+                if (!confirm('Hapus trail "' + id + '"? Badge terkait mungkin terpengaruh.')) return;
+                fetch("/api/admin/trails/" + id, { method: "DELETE", credentials: "include" })
+                    .then(function (r) {
+                        if (!r.ok) throw new Error("Gagal");
+                        toast("Dihapus", "Trail dihapus.", "success");
+                        loadTrails();
+                        loadDashboard();
+                    })
+                    .catch(function (e) {
+                        toast("Error", e.message, "error");
+                    });
+            }
+
+            function loadBadges() {
+                var tb = document.getElementById("tb-badges");
+                tb.innerHTML = '<tr class="spinner-row"><td colspan="5"><span class="spinner"></span>Memuat...</td></tr>';
+                Promise.all([
+                    adminFetch("/api/admin/badges").catch(function () { return []; }),
+                    adminFetch("/api/admin/trails").catch(function () { return []; })
+                ]).then(function (res) {
+                    var badges = Array.isArray(res[0]) ? res[0] : [];
+                    allTrails = Array.isArray(res[1]) ? res[1] : [];
+                    if (!badges.length) {
+                        tb.innerHTML = emptyRow(5, "Belum ada badge.");
+                        return;
+                    }
+                    var html = "";
+                    for (var i = 0; i < badges.length; i++) {
+                        var b = badges[i];
+                        var trail = null;
+                        for (var j = 0; j < allTrails.length; j++) {
+                            if (allTrails[j].id === b.trailId) { trail = allTrails[j]; break; }
                         }
+                        var trailHtml = trail ? '<span class="pill pill-teal">' + esc(trail.name) + '</span>' : '<span style="color:var(--text-light)">-</span>';
+                        var jsonData = JSON.stringify(JSON.stringify(b));
+                        html += "<tr>";
+                        html += "<td><code>" + esc(b.id) + "</code></td>";
+                        html += "<td><strong>" + esc(b.name) + "</strong></td>";
+                        html += "<td>" + trailHtml + "</td>";
+                        html += '<td style="color:var(--text-mid);max-width:240px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + esc(b.description || "-") + "</td>";
+                        html += '<td><div class="actions">';
+                        html += '<button class="btn btn-yellow btn-xs" onclick=\'openBadgeModal(' + jsonData + ')\'>Edit</button>';
+                        html += '<button class="btn btn-danger btn-xs" onclick="delBadge(\'' + esc(b.id) + '\')">Hapus</button>';
+                        html += "</div></td>";
+                        html += "</tr>";
+                    }
+                    tb.innerHTML = html;
+                }).catch(function (err) {
+                    tb.innerHTML = emptyRow(5, "Gagal memuat data badge.");
+                    toast("Gagal", err.message || "Tidak dapat memuat badge.", "error");
+                });
+            }
 
-                        function closeSiteModal() {
-                            document.getElementById("m-site").classList.remove("open");
-                            if (siteMap) {
-                                siteMap.remove();
-                                siteMap = null;
-                                siteMarker = null;
-                            }
-                            editingSiteId = null;
+            function openBadgeModal(jsonStr) {
+                var b = jsonStr ? JSON.parse(jsonStr) : null;
+                editingBadgeId = b ? b.id : null;
+                document.getElementById("m-badge-title").textContent = b ? "Edit Badge - " + b.id : "Tambah Badge Baru";
+                document.getElementById("f-badgeId").value = b ? b.id : "";
+                document.getElementById("f-badgeId").disabled = !!b;
+                document.getElementById("f-badgeName").value = b ? b.name : "";
+                document.getElementById("f-badgeDesc").value = b ? (b.description || "") : "";
+                var ready = allTrails.length > 0
+                    ? Promise.resolve(allTrails)
+                    : adminFetch("/api/admin/trails").then(function (d) { allTrails = Array.isArray(d) ? d : []; return allTrails; });
+                ready.then(function () {
+                    var sel = document.getElementById("f-badgeTrail");
+                    var optHtml = '<option value="">-- Pilih Trail --</option>';
+                    for (var i = 0; i < allTrails.length; i++) {
+                        var t = allTrails[i];
+                        var selected = (b && b.trailId === t.id) ? " selected" : "";
+                        optHtml += '<option value="' + esc(t.id) + '"' + selected + '>' + esc(t.name) + '</option>';
+                    }
+                    sel.innerHTML = optHtml;
+                });
+                document.getElementById("m-badge").classList.add("open");
+            }
+
+            function closeBadgeModal() {
+                document.getElementById("m-badge").classList.remove("open");
+                editingBadgeId = null;
+            }
+
+            function saveBadge() {
+                var id = document.getElementById("f-badgeId").value.trim();
+                var name = document.getElementById("f-badgeName").value.trim();
+                if (!id || !name) {
+                    toast("Validasi", "ID dan Nama Badge wajib diisi.", "error");
+                    return;
+                }
+                var isEdit = editingBadgeId !== null;
+                var payload = {
+                    id: id,
+                    name: name,
+                    trailId: document.getElementById("f-badgeTrail").value,
+                    description: document.getElementById("f-badgeDesc").value.trim()
+                };
+                var url = isEdit ? "/api/admin/badges/" + editingBadgeId : "/api/admin/badges";
+                fetch(url, {
+                    method: isEdit ? "PUT" : "POST",
+                    credentials: "include",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify(payload)
+                })
+                .then(function (r) {
+                    if (!r.ok) return r.text().then(function (t) { throw new Error(t); });
+                    return r.json();
+                })
+                .then(function (d) {
+                    toast("Berhasil", d.message || "Badge disimpan.", "success");
+                    closeBadgeModal();
+                    loadBadges();
+                    loadDashboard();
+                })
+                .catch(function (e) {
+                    toast("Error", e.message, "error");
+                });
+            }
+
+            function delBadge(id) {
+                if (!confirm('Hapus badge "' + id + '"?')) return;
+                fetch("/api/admin/badges/" + id, { method: "DELETE", credentials: "include" })
+                    .then(function (r) {
+                        if (!r.ok) throw new Error("Gagal");
+                        toast("Dihapus", "Badge dihapus.", "success");
+                        loadBadges();
+                        loadDashboard();
+                    })
+                    .catch(function (e) {
+                        toast("Error", e.message, "error");
+                    });
+            }
+
+            function loadUsers() {
+                var tb = document.getElementById("tb-users");
+                tb.innerHTML = '<tr class="spinner-row"><td colspan="7"><span class="spinner"></span>Memuat...</td></tr>';
+                adminFetch("/api/admin/users")
+                    .then(function (data) {
+                        var users = Array.isArray(data) ? data : [];
+                        if (!users.length) {
+                            tb.innerHTML = emptyRow(7, "Belum ada pengguna.");
+                            return;
                         }
-
-                        function saveSite() {
-                            var id = document.getElementById("f-siteId").value.trim();
-                            var name = document.getElementById("f-siteName").value.trim();
-                            if (!id || !name) {
-                                toast(
-                                    "Validasi",
-                                    "ID dan Nama Situs wajib diisi.",
-                                    "error",
-                                );
-                                return;
-                            }
-
-                            var latV = document.getElementById("f-siteLat").value.trim();
-                            var lngV = document.getElementById("f-siteLng").value.trim();
-                            var quizQ = document.getElementById("f-quizQ").value.trim();
-
-                            var payload = {
-                                id: id,
-                                name: name,
-                                era: document.getElementById("f-siteEra").value.trim(),
-                                status: document.getElementById("f-siteStatus").value,
-                                imageUrl: document.getElementById("f-siteImg").value.trim(),
-                                description: document
-                                    .getElementById("f-siteDesc")
-                                    .value.trim(),
-                                latitude: latV ? parseFloat(latV) : null,
-                                longitude: lngV ? parseFloat(lngV) : null,
-                                quiz: quizQ
-                                    ? {
-                                          questionText: quizQ,
-                                          optionA: document
-                                              .getElementById("f-quizA")
-                                              .value.trim(),
-                                          optionB: document
-                                              .getElementById("f-quizB")
-                                              .value.trim(),
-                                          optionC: document
-                                              .getElementById("f-quizC")
-                                              .value.trim(),
-                                          optionD: document
-                                              .getElementById("f-quizD")
-                                              .value.trim(),
-                                          correctOption:
-                                              document.getElementById("f-quizCorrect")
-                                                  .value,
-                                      }
-                                    : null,
-                            };
-
-                            var isEdit = editingSiteId !== null;
-                            fetch(
-                                isEdit
-                                    ? "/api/admin/sites/" + editingSiteId
-                                    : "/api/admin/sites",
-                                {
-                                    method: isEdit ? "PUT" : "POST",
-                                    credentials: "include",
-                                    headers: { "Content-Type": "application/json" },
-                                    body: JSON.stringify(payload),
-                                },
-                            )
-                                .then(function (r) {
-                                    if (!r.ok)
-                                        return r.text().then(function (t) {
-                                            throw new Error(t);
-                                        });
-                                    return r.json();
-                                })
-                                .then(function (d) {
-                                    toast(
-                                        "Berhasil",
-                                        d.message ||
-                                            (isEdit
-                                                ? "Situs diperbarui."
-                                                : "Situs ditambahkan."),
-                                        "success",
-                                    );
-                                    closeSiteModal();
-                                    loadSites();
-                                    loadDashboard();
-                                })
-                                .catch(function (e) {
-                                    toast("Error", e.message, "error");
-                                });
+                        var html = "";
+                        for (var i = 0; i < users.length; i++) {
+                            var u = users[i];
+                            var isAdmin = u.role === "ADMIN";
+                            html += "<tr>";
+                            html += '<td style="color:var(--text-light);font-size:12px">' + esc(u.id) + "</td>";
+                            html += "<td><strong>" + esc(u.username) + "</strong></td>";
+                            html += '<td style="color:var(--text-mid)">' + esc(u.email || "-") + "</td>";
+                            html += '<td><span class="pill ' + (isAdmin ? "pill-yellow" : "pill-gray") + '">' + (isAdmin ? "Admin" : "User") + "</span></td>";
+                            html += '<td style="text-align:center;font-weight:600">' + esc(u.level || 1) + "</td>";
+                            html += '<td style="text-align:center">' + esc(u.xp || 0) + "</td>";
+                            html += '<td style="text-align:center"><span class="pill pill-teal">' + esc(u.visitedCount || 0) + "</span></td>";
+                            html += "</tr>";
                         }
+                        tb.innerHTML = html;
+                    })
+                    .catch(function (err) {
+                        tb.innerHTML = emptyRow(7, "Gagal memuat data pengguna.");
+                        toast("Gagal", err.message || "Tidak dapat memuat pengguna.", "error");
+                    });
+            }
 
-                        function delSite(id) {
-                            if (
-                                !confirm(
-                                    'Hapus situs "' +
-                                        id +
-                                        '"? Tindakan ini tidak dapat dibatalkan.',
-                                )
-                            )
-                                return;
-                            fetch("/api/admin/sites/" + id, {
-                                method: "DELETE",
-                                credentials: "include",
-                            })
-                                .then(function (r) {
-                                    if (!r.ok) throw new Error("Gagal menghapus");
-                                    toast(
-                                        "Dihapus",
-                                        "Situs " + id + " berhasil dihapus.",
-                                        "success",
-                                    );
-                                    loadSites();
-                                    loadDashboard();
-                                })
-                                .catch(function (e) {
-                                    toast("Error", e.message, "error");
-                                });
+            var modalIds = ["m-site", "m-trail", "m-badge"];
+            for (var mi = 0; mi < modalIds.length; mi++) {
+                (function (modalId) {
+                    document.getElementById(modalId).addEventListener("click", function (e) {
+                        if (e.target === this) {
+                            if (modalId === "m-site") closeSiteModal();
+                            else if (modalId === "m-trail") closeTrailModal();
+                            else closeBadgeModal();
                         }
-
-                        /* ══════════════════════════════════════
-               KELOLA TRAIL
-            ══════════════════════════════════════ */
-                        function loadTrails() {
-                            document.getElementById("tb-trails").innerHTML =
-                                '<tr class="spinner-row"><td colspan="5"><span class="spinner"></span>Memuat…</td></tr>';
-                            Promise.all([
-                                fetch("/api/admin/trails", { credentials: "include" }).then(
-                                    function (r) {
-                                        return r.json();
-                                    },
-                                ),
-                                fetch("/api/admin/sites", { credentials: "include" }).then(
-                                    function (r) {
-                                        return r.json();
-                                    },
-                                ),
-                            ])
-                                .then(function (results) {
-                                    allTrails = Array.isArray(results[0]) ? results[0] : [];
-                                    allSites = Array.isArray(results[1]) ? results[1] : [];
-                                    var tb = document.getElementById("tb-trails");
-                                    if (!allTrails.length) {
-                                        tb.innerHTML = emptyRow(5, "Belum ada trail.");
-                                        return;
-                                    }
-                                    tb.innerHTML = allTrails
-                                        .map(function (t) {
-                                            var ids = t.siteIds || [];
-                                            var names = ids
-                                                .map(function (id, i) {
-                                                    var found = allSites.find(function (s) {
-                                                        return s.id === id;
-                                                    });
-                                                    return (
-                                                        '<span style="white-space:nowrap"><span class="pill pill-gray" style="font-size:10px">' +
-                                                        (i + 1) +
-                                                        "</span> " +
-                                                        esc(found ? found.name : id) +
-                                                        "</span>"
-                                                    );
-                                                })
-                                                .join(
-                                                    ' <span style="color:var(--yellow);font-weight:700">→</span> ',
-                                                );
-                                            return (
-                                                "<tr>" +
-                                                "<td><code>" + esc(t.id) + "</code></td>" +
-                                                "<td><strong>" + esc(t.name) + "</strong></td>" +
-                                                '<td style="text-align:center"><span class="pill pill-teal">' + ids.length + "</span></td>" +
-                                                '<td style="font-size:12.5px;line-height:1.8">' + (names || '<span style="color:var(--text-light)">—</span>') + "</td>" +
-                                                '<td><div class="actions">' +
-                                                '<button class="btn btn-yellow btn-xs" onclick=\'openTrailModal(' + JSON.stringify(JSON.stringify(t)) + ")'>Edit</button>" +
-                                                '<button class="btn btn-danger btn-xs" onclick="delTrail(\'" + esc(t.id) + "')\">Hapus</button>" +
-                                                "</div></td>" +
-                                                "</tr>"
-                                            );
-                                        })
-                                        .join("");
-                                })
-                                .catch(function () {
-                                    toast("Gagal", "Tidak dapat memuat trail.", "error");
-                                });
-                        }
-
-                        function openTrailModal(jsonStr) {
-                            var t = jsonStr ? JSON.parse(jsonStr) : null;
-                            editingTrailId = t ? t.id : null;
-                            document.getElementById("m-trail-title").textContent = t
-                                ? "Edit Trail — " + t.id
-                                : "Tambah Trail Baru";
-                            document.getElementById("f-trailId").value = t ? t.id : "";
-                            document.getElementById("f-trailId").disabled = !!t;
-                            document.getElementById("f-trailName").value = t ? t.name : "";
-                            document.getElementById("m-trail").classList.add("open");
-                            // Pastikan allSites terisi
-                            var ready =
-                                allSites.length > 0
-                                    ? Promise.resolve(allSites)
-                                    : fetch("/api/admin/sites", { credentials: "include" })
-                                          .then(function (r) {
-                                              return r.json();
-                                          })
-                                          .then(function (d) {
-                                              allSites = d;
-                                              return d;
-                                          });
-                            ready.then(function () {
-                                buildChecklist(t ? t.siteIds || [] : []);
-                            });
-                        }
-
-                        function buildChecklist(selectedIds) {
-                            var box = document.getElementById("trail-checklist");
-                            if (!allSites.length) {
-                                box.innerHTML =
-                                    '<div style="padding:16px;color:var(--text-light)">Tidak ada situs tersedia.</div>';
-                                return;
-                            }
-                            // selected first in order, then unselected
-                            var sel = selectedIds
-                                .map(function (id) {
-                                    return allSites.find(function (s) {
-                                        return s.id === id;
-                                    });
-                                })
-                                .filter(Boolean);
-                            var unsel = allSites.filter(function (s) {
-                                return !selectedIds.includes(s.id);
-                            });
-                            var ordered = sel.concat(unsel);
-                            box.innerHTML = ordered
-                                .map(function (s) {
-                                    var checked = selectedIds.includes(s.id)
-                                        ? "checked"
-                                        : "";
-                                    return (
-                                        '<div class="checklist-item" data-sid="' +
-                                        esc(s.id) +
-                                        '">' +
-                                        '<input type="checkbox" id="chk-' +
-                                        esc(s.id) +
-                                        '" ' +
-                                        checked +
-                                        ' onchange="updatePreview()">' +
-                                        '<label for="chk-' +
-                                        esc(s.id) +
-                                        '">' +
-                                        esc(s.name) +
-                                        ' <small style="color:var(--text-light)">(' +
-                                        esc(s.id) +
-                                        ")</small></label>" +
-                                        '<button class="order-btn" onclick="moveItem(\'' +
-                                        esc(s.id) +
-                                        '\',-1)" title="Naik">↑</button>' +
-                                        '<button class="order-btn" onclick="moveItem(\'' +
-                                        esc(s.id) +
-                                        '\',1)" title="Turun">↓</button>' +
-                                        "</div>"
-                                    );
-                                })
-                                .join("");
-                            updatePreview();
-                        }
-
-                        function moveItem(sid, dir) {
-                            var box = document.getElementById("trail-checklist");
-                            var items = Array.from(box.querySelectorAll(".checklist-item"));
-                            var idx = items.findIndex(function (el) {
-                                return el.dataset.sid === sid;
-                            });
-                            if (idx < 0) return;
-                            var ni = idx + dir;
-                            if (ni < 0 || ni >= items.length) return;
-                            if (dir === -1) box.insertBefore(items[idx], items[ni]);
-                            else box.insertBefore(items[ni], items[idx]);
-                            updatePreview();
-                        }
-
-                        function updatePreview() {
-                            var box = document.getElementById("trail-checklist");
-                            var prev = document.getElementById("route-preview");
-                            var items = Array.from(box.querySelectorAll(".checklist-item"));
-                            var sel = items.filter(function (el) {
-                                return el.querySelector("input").checked;
-                            });
-                            if (!sel.length) {
-                                prev.textContent = "Belum ada situs yang dipilih.";
-                                return;
-                            }
-                            prev.innerHTML = sel
-                                .map(function (el, i) {
-                                    var sid = el.dataset.sid;
-                                    var s = allSites.find(function (x) {
-                                        return x.id === sid;
-                                    });
-                                    var name = s ? s.name : sid;
-                                    return (
-                                        '<span class="pill pill-gray" style="font-size:10px">' +
-                                        (i + 1) +
-                                        "</span> " +
-                                        esc(name) +
-                                        (i < sel.length - 1
-                                            ? ' <span style="color:var(--yellow);font-weight:700">→</span> '
-                                            : "")
-                                    );
-                                })
-                                .join("");
-                        }
-
-                        function closeTrailModal() {
-                            document.getElementById("m-trail").classList.remove("open");
-                            editingTrailId = null;
-                        }
-
-                        function saveTrail() {
-                            var id = document.getElementById("f-trailId").value.trim();
-                            var name = document.getElementById("f-trailName").value.trim();
-                            if (!id || !name) {
-                                toast(
-                                    "Validasi",
-                                    "ID dan Nama Trail wajib diisi.",
-                                    "error",
-                                );
-                                return;
-                            }
-                            var items = Array.from(
-                                document
-                                    .getElementById("trail-checklist")
-                                    .querySelectorAll(".checklist-item"),
-                            );
-                            var siteIds = items
-                                .filter(function (el) {
-                                    return el.querySelector("input").checked;
-                                })
-                                .map(function (el) {
-                                    return el.dataset.sid;
-                                });
-                            var isEdit = editingTrailId !== null;
-                            fetch(
-                                isEdit
-                                    ? "/api/admin/trails/" + editingTrailId
-                                    : "/api/admin/trails",
-                                {
-                                    method: isEdit ? "PUT" : "POST",
-                                    credentials: "include",
-                                    headers: { "Content-Type": "application/json" },
-                                    body: JSON.stringify({
-                                        id: id,
-                                        name: name,
-                                        siteIds: siteIds,
-                                    }),
-                                },
-                            )
-                                .then(function (r) {
-                                    if (!r.ok)
-                                        return r.text().then(function (t) {
-                                            throw new Error(t);
-                                        });
-                                    return r.json();
-                                })
-                                .then(function (d) {
-                                    toast(
-                                        "Berhasil",
-                                        d.message || "Trail disimpan.",
-                                        "success",
-                                    );
-                                    closeTrailModal();
-                                    loadTrails();
-                                    loadDashboard();
-                                })
-                                .catch(function (e) {
-                                    toast("Error", e.message, "error");
-                                });
-                        }
-
-                        function delTrail(id) {
-                            if (
-                                !confirm(
-                                    'Hapus trail "' +
-                                        id +
-                                        '"? Badge terkait mungkin terpengaruh.',
-                                )
-                            )
-                                return;
-                            fetch("/api/admin/trails/" + id, {
-                                method: "DELETE",
-                                credentials: "include",
-                            })
-                                .then(function (r) {
-                                    if (!r.ok) throw new Error("Gagal");
-                                    toast("Dihapus", "Trail dihapus.", "success");
-                                    loadTrails();
-                                    loadDashboard();
-                                })
-                                .catch(function (e) {
-                                    toast("Error", e.message, "error");
-                                });
-                        }
-
-                        /* ══════════════════════════════════════
-               KELOLA BADGE
-            ══════════════════════════════════════ */
-                        function loadBadges() {
-                            document.getElementById("tb-badges").innerHTML =
-                                '<tr class="spinner-row"><td colspan="5"><span class="spinner"></span>Memuat…</td></tr>';
-                            Promise.all([
-                                fetch("/api/admin/badges", { credentials: "include" }).then(
-                                    function (r) {
-                                        return r.json();
-                                    },
-                                ),
-                                fetch("/api/admin/trails", { credentials: "include" }).then(
-                                    function (r) {
-                                        return r.json();
-                                    },
-                                ),
-                            ])
-                                .then(function (res) {
-                                    var badges = Array.isArray(res[0]) ? res[0] : [];
-                                    allTrails = Array.isArray(res[1]) ? res[1] : [];
-                                    var tb = document.getElementById("tb-badges");
-                                    if (!badges.length) {
-                                        tb.innerHTML = emptyRow(5, "Belum ada badge.");
-                                        return;
-                                    }
-                                    tb.innerHTML = badges
-                                        .map(function (b) {
-                                            var t = allTrails.find(function (x) {
-                                                return x.id === b.trailId;
-                                            });
-                                            return (
-                                                "<tr>" +
-                                                "<td><code>" + esc(b.id) + "</code></td>" +
-                                                "<td><strong>" + esc(b.name) + "</strong></td>" +
-                                                "<td>" + (t ? '<span class="pill pill-teal">' + esc(t.name) + "</span>" : '<span style="color:var(--text-light)">—</span>') + "</td>" +
-                                                '<td style="color:var(--text-mid);max-width:240px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + esc(b.description || "—") + "</td>" +
-                                                '<td><div class="actions">' +
-                                                '<button class="btn btn-yellow btn-xs" onclick=\'openBadgeModal(' + JSON.stringify(JSON.stringify(b)) + ")'>Edit</button>" +
-                                                '<button class="btn btn-danger btn-xs" onclick="delBadge(\'" + esc(b.id) + "')\">Hapus</button>" +
-                                                "</div></td>" +
-                                                "</tr>"
-                                            );
-                                        })
-                                        .join("");
-                                })
-                                .catch(function () {
-                                    toast("Gagal", "Tidak dapat memuat badge.", "error");
-                                });
-                        }
-
-                        function openBadgeModal(jsonStr) {
-                            var b = jsonStr ? JSON.parse(jsonStr) : null;
-                            editingBadgeId = b ? b.id : null;
-                            document.getElementById("m-badge-title").textContent = b
-                                ? "Edit Badge — " + b.id
-                                : "Tambah Badge Baru";
-                            document.getElementById("f-badgeId").value = b ? b.id : "";
-                            document.getElementById("f-badgeId").disabled = !!b;
-                            document.getElementById("f-badgeName").value = b ? b.name : "";
-                            document.getElementById("f-badgeDesc").value = b
-                                ? b.description
-                                : "";
-                            var ready =
-                                allTrails.length > 0
-                                    ? Promise.resolve(allTrails)
-                                    : fetch("/api/admin/trails", { credentials: "include" })
-                                          .then(function (r) {
-                                              return r.json();
-                                          })
-                                          .then(function (d) {
-                                              allTrails = d;
-                                              return d;
-                                          });
-                            ready.then(function () {
-                                var sel = document.getElementById("f-badgeTrail");
-                                sel.innerHTML =
-                                    '<option value="">— Pilih Trail —</option>' +
-                                    allTrails
-                                        .map(function (t) {
-                                            return (
-                                                '<option value="' +
-                                                esc(t.id) +
-                                                '"' +
-                                                (b && b.trailId === t.id
-                                                    ? " selected"
-                                                    : "") +
-                                                ">" +
-                                                esc(t.name) +
-                                                "</option>"
-                                            );
-                                        })
-                                        .join("");
-                            });
-                            document.getElementById("m-badge").classList.add("open");
-                        }
-
-                        function closeBadgeModal() {
-                            document.getElementById("m-badge").classList.remove("open");
-                            editingBadgeId = null;
-                        }
-
-                        function saveBadge() {
-                            var id = document.getElementById("f-badgeId").value.trim();
-                            var name = document.getElementById("f-badgeName").value.trim();
-                            if (!id || !name) {
-                                toast(
-                                    "Validasi",
-                                    "ID dan Nama Badge wajib diisi.",
-                                    "error",
-                                );
-                                return;
-                            }
-                            var isEdit = editingBadgeId !== null;
-                            var payload = {
-                                id: id,
-                                name: name,
-                                trailId: document.getElementById("f-badgeTrail").value,
-                                description: document
-                                    .getElementById("f-badgeDesc")
-                                    .value.trim(),
-                            };
-                            fetch(
-                                isEdit
-                                    ? "/api/admin/badges/" + editingBadgeId
-                                    : "/api/admin/badges",
-                                {
-                                    method: isEdit ? "PUT" : "POST",
-                                    credentials: "include",
-                                    headers: { "Content-Type": "application/json" },
-                                    body: JSON.stringify(payload),
-                                },
-                            )
-                                .then(function (r) {
-                                    if (!r.ok)
-                                        return r.text().then(function (t) {
-                                            throw new Error(t);
-                                        });
-                                    return r.json();
-                                })
-                                .then(function (d) {
-                                    toast(
-                                        "Berhasil",
-                                        d.message || "Badge disimpan.",
-                                        "success",
-                                    );
-                                    closeBadgeModal();
-                                    loadBadges();
-                                    loadDashboard();
-                                })
-                                .catch(function (e) {
-                                    toast("Error", e.message, "error");
-                                });
-                        }
-
-                        function delBadge(id) {
-                            if (!confirm('Hapus badge "' + id + '"?')) return;
-                            fetch("/api/admin/badges/" + id, {
-                                method: "DELETE",
-                                credentials: "include",
-                            })
-                                .then(function (r) {
-                                    if (!r.ok) throw new Error("Gagal");
-                                    toast("Dihapus", "Badge dihapus.", "success");
-                                    loadBadges();
-                                    loadDashboard();
-                                })
-                                .catch(function (e) {
-                                    toast("Error", e.message, "error");
-                                });
-                        }
-
-                        /* ══════════════════════════════════════
-               DAFTAR PENGGUNA
-            ══════════════════════════════════════ */
-                        function loadUsers() {
-                            document.getElementById("tb-users").innerHTML =
-                                '<tr class="spinner-row"><td colspan="7"><span class="spinner"></span>Memuat…</td></tr>';
-                            fetch("/api/admin/users", { credentials: "include" })
-                                .then(function (r) {
-                                    return r.json();
-                                })
-                                .then(function (data) {
-                                    var users = Array.isArray(data) ? data : [];
-                                    var tb = document.getElementById("tb-users");
-                                    if (!users.length) {
-                                        tb.innerHTML = emptyRow(7, "Belum ada pengguna.");
-                                        return;
-                                    }
-                                    tb.innerHTML = users
-                                        .map(function (u) {
-                                            var isAdmin = u.role === "ADMIN";
-                                            return (
-                                                "<tr>" +
-                                                '<td style="color:var(--text-light);font-size:12px">' +
-                                                esc(u.id) +
-                                                "</td>" +
-                                                "<td><strong>" +
-                                                esc(u.username) +
-                                                "</strong></td>" +
-                                                '<td style="color:var(--text-mid)">' +
-                                                esc(u.email || "—") +
-                                                "</td>" +
-                                                '<td><span class="pill ' +
-                                                (isAdmin ? "pill-yellow" : "pill-gray") +
-                                                '">' +
-                                                (isAdmin ? "⚙ Admin" : "User") +
-                                                "</span></td>" +
-                                                '<td style="text-align:center;font-weight:600">' +
-                                                esc(u.level || 1) +
-                                                "</td>" +
-                                                '<td style="text-align:center">' +
-                                                esc(u.xp || 0) +
-                                                "</td>" +
-                                                '<td style="text-align:center"><span class="pill pill-teal">' +
-                                                esc(u.visitedCount || 0) +
-                                                "</span></td>" +
-                                                "</tr>"
-                                            );
-                                        })
-                                        .join("");
-                                })
-                                .catch(function () {
-                                    toast("Gagal", "Tidak dapat memuat pengguna.", "error");
-                                });
-                        }
-
-                        /* ══════════════════════════════════════
-               CLOSE BACKDROP ON CLICK OUTSIDE BOX
-            ══════════════════════════════════════ */
-                        ["m-site", "m-trail", "m-badge"].forEach(function (id) {
-                            document
-                                .getElementById(id)
-                                .addEventListener("click", function (e) {
-                                    if (e.target === this) {
-                                        if (id === "m-site") closeSiteModal();
-                                        else if (id === "m-trail") closeTrailModal();
-                                        else closeBadgeModal();
-                                    }
-                                });
-                        });
+                    });
+                })(modalIds[mi]);
+            }
         </script>
     </body>
 </html>
