@@ -10,6 +10,9 @@ var markers = {};
 var currentQuizSiteId = null;
 var currentDetailSiteId = null;
 var currentExplorerName = "";
+var customRouteTargetId = null;
+var routeExpPoints = [];
+var routeExpMarkers = {};
 
 // ---- Geofencing / Location Tracking ----
 var locationWatcher = null;
@@ -294,15 +297,13 @@ function renderSites(sites) {
     card.setAttribute("data-site-id", s.id);
 
     card.innerHTML =
-      '<div class="visited-badge">Sudah Dikunjungi</div>' +
       '<div class="site-card-header">' +
       '<span class="site-id">' +
       s.id +
       "</span>" +
-      '<span class="site-status">' +
-      s.status +
-      "</span>" +
+      '<span class="visited-badge">Sudah Dikunjungi</span>' +
       "</div>" +
+      (s.imageUrl ? '<img src="' + s.imageUrl + '" class="site-card-img" alt="' + s.name + '">' : "") +
       "<h3>" +
       s.name +
       "</h3>" +
@@ -312,18 +313,28 @@ function renderSites(sites) {
       '<p class="site-description">' +
       s.description +
       "</p>" +
-      '<div class="site-coords">' +
+      '<div class="site-meta-row" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">' +
+      '<div class="site-coords" style="margin-bottom:0;">' +
       s.latitude +
       ", " +
       s.longitude +
       "</div>" +
-      '<div class="site-buttons" style="display:flex; gap:8px;">' +
+      '<span class="site-status">' +
+      s.status +
+      "</span>" +
+      "</div>" +
+      '<div class="site-card-bottom" style="display:flex; justify-content:space-between; align-items:center; width:100%;">' +
+      '<div class="site-buttons" style="display:flex; justify-content:space-between; align-items:center; width:100%;">' +
       '<button class="btn-visit" onclick="openQuizModal(\'' +
       s.id +
       "')\">Kunjungi & Kuis</button>" +
       '<button class="btn-visit detail-btn" style="background-color: var(--teal); display:none;" onclick="openSiteDetailModal(\'' +
       s.id +
       "')\">Detail & Ulasan</button>" +
+      '<button class="btn-more" onclick="openSiteDetailModal(\'' +
+      s.id +
+      "')\">Selengkapnya &rarr;</button>" +
+      "</div>" +
       "</div>";
     grid.appendChild(card);
   }
@@ -601,7 +612,18 @@ function openSiteDetailModal(siteId) {
   document.getElementById("detailSiteName").textContent = site.name;
   document.getElementById("detailSiteId").textContent = site.id;
   document.getElementById("detailSiteEra").textContent = site.era;
-  document.getElementById("detailSiteDesc").textContent = site.description;
+  document.getElementById("detailSiteDesc").innerHTML = site.description;
+
+  var detailImg = document.getElementById("detailSiteImg");
+  if (detailImg) {
+    if (site.imageUrl) {
+      detailImg.src = site.imageUrl;
+      detailImg.style.display = "block";
+    } else {
+      detailImg.src = "";
+      detailImg.style.display = "none";
+    }
+  }
 
   loadSiteReviews(siteId);
 
@@ -1288,24 +1310,51 @@ function renderJelajahSiteMarkers() {
     var cls = isVisited(s.id) ? "visited" : "unvisited";
     var icon = L.divIcon({
       className: "",
-      html: '<div class="jm-dot ' + cls + '"></div>',
-      iconSize: [20, 20],
-      iconAnchor: [10, 10],
+      html:
+        '<div class="explore-marker-wrap">' +
+        '<div class="explore-marker-avatar" style="background-image: url(\'' + (s.imageUrl || '') + '\')"></div>' +
+        '<div class="explore-marker-dot ' + cls + '"></div>' +
+        "</div>",
+      iconSize: [40, 50],
+      iconAnchor: [20, 50],
     });
     var marker = L.marker([s.latitude, s.longitude], { icon: icon }).addTo(
       jelajahMap,
     );
-    marker.bindTooltip(
-      "<strong>" + s.name + "</strong><br><small>" + s.era + "</small>",
-      {
-        permanent: false,
-        direction: "top",
-        className: "jelajah-tt",
-        offset: [0, -12],
-      },
-    );
+    
+    var popupContent =
+      '<div class="explore-popup">' +
+      (s.imageUrl ? '<img src="' + s.imageUrl + '" class="explore-popup-img" alt="' + s.name + '">' : '') +
+      '<div class="explore-popup-title">' + s.name + '</div>' +
+      '<div class="explore-popup-era">' + s.era + '</div>' +
+      '<button class="explore-popup-btn" onclick="startCustomRoute(\'' + s.id + '\')">Mulai Perjalanan</button>' +
+      '</div>';
+
+    marker.bindPopup(popupContent, {
+      closeButton: false,
+      offset: [0, -45],
+      className: "explore-leaflet-popup"
+    });
+    
+    marker.on("mouseover", function (e) {
+      this.openPopup();
+    });
+    
     jelajahSiteMarkers[s.id] = marker;
   }
+}
+
+function startCustomRoute(siteId) {
+  customRouteTargetId = siteId;
+  lastRouteTargetId = null; // force reload route
+  if (userLocationMarker) {
+    var ll = userLocationMarker.getLatLng();
+    updateJelajahPlayer(ll.lat, ll.lng);
+  } else {
+    // default/initial GPS coords fallback
+    updateJelajahPlayer(3.5753, 98.6837);
+  }
+  showToast("Rute Perjalanan Diubah", "Navigasi diubah menuju situs pilihan Anda.", "success");
 }
 
 /** Perbarui posisi player, pan otomatis, update HUD dan efek situs */
@@ -1335,6 +1384,17 @@ function updateJelajahPlayer(lat, lon) {
   updateJelajahRoute(lat, lon);
   updateJelajahSiteGlows(lat, lon);
 
+  // Check for EXP points collection along the route
+  for (var i = 0; i < routeExpPoints.length; i++) {
+    var ep = routeExpPoints[i];
+    if (!ep.collected) {
+      var distToPlayer = haversineDistance(lat, lon, ep.lat, ep.lon);
+      if (distToPlayer <= 25) { // 25 meter radius koleksi
+        collectExpPoint(ep);
+      }
+    }
+  }
+
   var el = document.getElementById("hudCoords");
   if (el) el.textContent = lat.toFixed(5) + "\n" + lon.toFixed(5);
 }
@@ -1345,26 +1405,44 @@ function updateJelajahHUD(lat, lon) {
   var distEl = document.getElementById("hudDistance");
   if (!nameEl || !distEl) return;
 
-  var unvisited = allSites.filter(function (s) {
-    return !isVisited(s.id);
-  });
-  if (unvisited.length === 0) {
-    nameEl.textContent = "Semua situs dikunjungi!";
-    distEl.textContent = "";
-    return;
+  var targetSite = null;
+  if (customRouteTargetId) {
+    if (isVisited(customRouteTargetId)) {
+      customRouteTargetId = null;
+    } else {
+      targetSite = allSites.find(function (s) {
+        return s.id === customRouteTargetId;
+      });
+    }
   }
 
-  var nearest = unvisited.reduce(
-    function (best, s) {
-      var d = haversineDistance(lat, lon, s.latitude, s.longitude);
-      return d < best.dist ? { site: s, dist: d } : best;
-    },
-    { site: unvisited[0], dist: Infinity },
-  );
+  if (!targetSite) {
+    var unvisited = allSites.filter(function (s) {
+      return !isVisited(s.id);
+    });
+    if (unvisited.length === 0) {
+      nameEl.textContent = "Semua situs dikunjungi!";
+      distEl.textContent = "";
+      return;
+    }
 
-  nameEl.textContent = nearest.site.name;
-  var d = Math.round(nearest.dist);
-  distEl.textContent = d < 1000 ? d + " m" : (d / 1000).toFixed(2) + " km";
+    var nearest = unvisited.reduce(
+      function (best, s) {
+        var d = haversineDistance(lat, lon, s.latitude, s.longitude);
+        return d < best.dist ? { site: s, dist: d } : best;
+      },
+      { site: unvisited[0], dist: Infinity },
+    );
+    targetSite = nearest.site;
+  }
+
+  nameEl.textContent = targetSite.name;
+  var d = haversineDistance(lat, lon, targetSite.latitude, targetSite.longitude);
+  var distRounded = Math.round(d);
+  distEl.textContent =
+    distRounded < 1000
+      ? distRounded + " m"
+      : (distRounded / 1000).toFixed(2) + " km";
 }
 
 /**
@@ -1374,32 +1452,46 @@ function updateJelajahHUD(lat, lon) {
 function updateJelajahRoute(userLat, userLon) {
   if (!jelajahMap) return;
 
-  var unvisited = allSites.filter(function (s) {
-    return !isVisited(s.id);
-  });
-  if (unvisited.length === 0) {
-    clearJelajahRoute();
-    return;
+  var targetSite = null;
+  if (customRouteTargetId) {
+    if (isVisited(customRouteTargetId)) {
+      customRouteTargetId = null;
+    } else {
+      targetSite = allSites.find(function (s) {
+        return s.id === customRouteTargetId;
+      });
+    }
   }
 
-  var nearest = unvisited.reduce(
-    function (best, s) {
-      var d = haversineDistance(userLat, userLon, s.latitude, s.longitude);
-      return d < best.dist ? { site: s, dist: d } : best;
-    },
-    { site: unvisited[0], dist: Infinity },
-  );
+  if (!targetSite) {
+    var unvisited = allSites.filter(function (s) {
+      return !isVisited(s.id);
+    });
+    if (unvisited.length === 0) {
+      clearJelajahRoute();
+      return;
+    }
+
+    var nearest = unvisited.reduce(
+      function (best, s) {
+        var d = haversineDistance(userLat, userLon, s.latitude, s.longitude);
+        return d < best.dist ? { site: s, dist: d } : best;
+      },
+      { site: unvisited[0], dist: Infinity },
+    );
+    targetSite = nearest.site;
+  }
 
   // Jika target belum berubah, tidak perlu fetch ulang
-  if (lastRouteTargetId === nearest.site.id) return;
-  lastRouteTargetId = nearest.site.id;
+  if (lastRouteTargetId === targetSite.id) return;
+  lastRouteTargetId = targetSite.id;
 
   // Tampilkan placeholder straight-line langsung
   drawStraightRoute(
     userLat,
     userLon,
-    nearest.site.latitude,
-    nearest.site.longitude,
+    targetSite.latitude,
+    targetSite.longitude,
   );
 
   // Debounce fetch rute jalan dari OSRM
@@ -1408,8 +1500,8 @@ function updateJelajahRoute(userLat, userLon) {
     fetchAndDrawRoute(
       userLat,
       userLon,
-      nearest.site.latitude,
-      nearest.site.longitude,
+      targetSite.latitude,
+      targetSite.longitude,
     );
   }, 600);
 }
@@ -1471,6 +1563,7 @@ function drawRouteFromGeoJSON(coords) {
   });
 
   jelajahRouteLayer = L.layerGroup([border, fill]).addTo(jelajahMap);
+  generateRouteExpPoints(latlngs);
 }
 
 /** Fallback: garis lurus sementara OSRM belum merespons */
@@ -1490,6 +1583,7 @@ function drawStraightRoute(lat1, lon1, lat2, lon2) {
       lineCap: "round",
     },
   ).addTo(jelajahMap);
+  generateRouteExpPoints([[lat1, lon1], [lat2, lon2]]);
 }
 
 /** Hapus layer rute dari peta */
@@ -1498,6 +1592,135 @@ function clearJelajahRoute() {
     jelajahMap.removeLayer(jelajahRouteLayer);
     jelajahRouteLayer = null;
   }
+  clearRouteExpMarkers();
+}
+
+function generateRouteExpPoints(latlngs) {
+  clearRouteExpMarkers();
+  routeExpPoints = [];
+
+  if (latlngs.length < 2) return;
+
+  var currentDist = 0;
+  var count = 0;
+
+  if (latlngs.length === 2) {
+    var p1 = latlngs[0];
+    var p2 = latlngs[1];
+    var totalD = haversineDistance(p1[0], p1[1], p2[0], p2[1]);
+    var numPoints = Math.floor(totalD / 120);
+    
+    for (var k = 1; k <= numPoints; k++) {
+      var ratio = k / (numPoints + 1);
+      var interpLat = p1[0] + (p2[0] - p1[0]) * ratio;
+      var interpLon = p1[1] + (p2[1] - p1[1]) * ratio;
+      
+      var epId = "exp_straight_" + k;
+      var ep = {
+        id: epId,
+        lat: interpLat,
+        lon: interpLon,
+        xpValue: 15,
+        collected: false
+      };
+      routeExpPoints.push(ep);
+
+      var icon = L.divIcon({
+        className: "",
+        html: '<div class="exp-point-marker">★</div>',
+        iconSize: [24, 24],
+        iconAnchor: [12, 12]
+      });
+      var marker = L.marker([ep.lat, ep.lon], { icon: icon }).addTo(jelajahMap);
+      marker.bindTooltip("+15 XP", {
+        permanent: false,
+        direction: "top",
+        className: "jelajah-tt",
+        offset: [0, -10]
+      });
+      
+      routeExpMarkers[epId] = marker;
+    }
+    return;
+  }
+
+  for (var i = 1; i < latlngs.length - 1; i++) {
+    var p1 = latlngs[i - 1];
+    var p2 = latlngs[i];
+    var segDist = haversineDistance(p1[0], p1[1], p2[0], p2[1]);
+    currentDist += segDist;
+
+    // Bagikan bintang EXP setiap 120 meter
+    if (currentDist >= 120) {
+      var epId = "exp_" + lastRouteTargetId + "_" + i;
+      var ep = {
+        id: epId,
+        lat: p2[0],
+        lon: p2[1],
+        xpValue: 15, // 15 XP per titik bintang
+        collected: false
+      };
+      routeExpPoints.push(ep);
+
+      // Gambar marker di peta
+      var icon = L.divIcon({
+        className: "",
+        html: '<div class="exp-point-marker">★</div>',
+        iconSize: [24, 24],
+        iconAnchor: [12, 12]
+      });
+      var marker = L.marker([ep.lat, ep.lon], { icon: icon }).addTo(jelajahMap);
+      
+      marker.bindTooltip("+15 XP", {
+        permanent: false,
+        direction: "top",
+        className: "jelajah-tt",
+        offset: [0, -10]
+      });
+
+      routeExpMarkers[epId] = marker;
+      currentDist = 0; // reset akumulasi jarak
+      count++;
+    }
+  }
+}
+
+function clearRouteExpMarkers() {
+  for (var id in routeExpMarkers) {
+    if (jelajahMap && routeExpMarkers[id]) {
+      jelajahMap.removeLayer(routeExpMarkers[id]);
+    }
+  }
+  routeExpMarkers = {};
+  routeExpPoints = [];
+}
+
+function collectExpPoint(ep) {
+  ep.collected = true;
+  
+  if (jelajahMap && routeExpMarkers[ep.id]) {
+    jelajahMap.removeLayer(routeExpMarkers[ep.id]);
+    delete routeExpMarkers[ep.id];
+  }
+  
+  fetch("/api/explorer/add-xp?amount=" + ep.xpValue, { method: "POST" })
+    .then(function (r) {
+      if (r.status === 401) {
+        showAuth();
+        return null;
+      }
+      return r.json();
+    })
+    .then(function (res) {
+      if (res && res.success) {
+        showToast("Koleksi XP", "Mendapatkan +" + ep.xpValue + " XP dari perjalanan!", "success");
+        if (res.leveledUp) {
+          showToast("Naik Level!", "Selamat! Level Anda naik menjadi Level " + res.newLevel, "info");
+        }
+        loadExplorerState(); // Update tampilan Riwayat (XP progress bar & level)
+      }
+    })
+    .catch(function () {});
 }
 
 /** Update efek glow marker situs berdasarkan jarak ke user */
@@ -1516,9 +1739,13 @@ function updateJelajahSiteGlows(lat, lon) {
     jelajahSiteMarkers[id].setIcon(
       L.divIcon({
         className: "",
-        html: '<div class="jm-dot ' + cls + '"></div>',
-        iconSize: [20, 20],
-        iconAnchor: [10, 10],
+        html:
+          '<div class="explore-marker-wrap">' +
+          '<div class="explore-marker-avatar" style="background-image: url(\'' + (site.imageUrl || '') + '\')"></div>' +
+          '<div class="explore-marker-dot ' + cls + '"></div>' +
+          "</div>",
+        iconSize: [40, 50],
+        iconAnchor: [20, 50],
       }),
     );
   }

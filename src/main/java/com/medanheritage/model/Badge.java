@@ -2,8 +2,10 @@ package com.medanheritage.model;
 
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
+import jakarta.persistence.Table;
 
 @Entity
+@Table(name = "badge")
 public class Badge {
 
     @Id

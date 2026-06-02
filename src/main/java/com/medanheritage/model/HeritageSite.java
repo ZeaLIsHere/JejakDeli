@@ -2,12 +2,15 @@ package com.medanheritage.model;
 
 import jakarta.persistence.Entity;
 import jakarta.persistence.Embedded;
+import jakarta.persistence.Table;
 
 @Entity
+@Table(name = "situs_sejarah")
 public class HeritageSite extends Location {
 
     private String era;
     private String status;
+    private String imageUrl;
 
     @Embedded
     private QuizQuestion quiz;
@@ -53,5 +56,13 @@ public class HeritageSite extends Location {
 
     public void setQuiz(QuizQuestion quiz) {
         this.quiz = quiz;
+    }
+
+    public String getImageUrl() {
+        return imageUrl;
+    }
+
+    public void setImageUrl(String imageUrl) {
+        this.imageUrl = imageUrl;
     }
 }

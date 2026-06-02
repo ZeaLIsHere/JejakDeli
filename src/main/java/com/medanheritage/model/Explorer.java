@@ -5,6 +5,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 @Entity
+@Table(name = "akun_user")
 public class Explorer {
 
     @Id
@@ -25,8 +26,8 @@ public class Explorer {
 
     @ManyToMany(fetch = FetchType.EAGER)
     @JoinTable(
-        name = "explorer_visited_sites",
-        joinColumns = @JoinColumn(name = "explorer_id"),
+        name = "user_visited_sites",
+        joinColumns = @JoinColumn(name = "user_id"),
         inverseJoinColumns = @JoinColumn(name = "site_id")
     )
     @com.fasterxml.jackson.annotation.JsonIgnore
@@ -34,8 +35,8 @@ public class Explorer {
 
     @ManyToMany(fetch = FetchType.EAGER)
     @JoinTable(
-        name = "explorer_earned_badges",
-        joinColumns = @JoinColumn(name = "explorer_id"),
+        name = "user_earned_badges",
+        joinColumns = @JoinColumn(name = "user_id"),
         inverseJoinColumns = @JoinColumn(name = "badge_id")
     )
     @com.fasterxml.jackson.annotation.JsonIgnore
