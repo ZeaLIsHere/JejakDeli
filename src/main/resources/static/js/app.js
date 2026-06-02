@@ -10,6 +10,7 @@ var markers = {};
 var currentQuizSiteId = null;
 var currentDetailSiteId = null;
 var currentExplorerName = "";
+var currentIsAdmin = false;
 var customRouteTargetId = null;
 var routeExpPoints = [];
 var routeExpMarkers = {};
@@ -37,6 +38,10 @@ var jelajahRouteLayer = null; // rute jalan OSRM
 var lastRouteTargetId = null; // ID situs tujuan terakhir
 var routeFetchTimer = null; // debounce fetch OSRM
 
+// ---- Trail Mode ----
+var activeTrailId = null; // ID trail yang sedang aktif di Jelajah
+var activeTrailSiteIndex = 0; // Indeks waypoint trail saat ini
+
 function checkLoginStatus() {
   fetch("/api/auth/status")
     .then(function (r) {
@@ -44,7 +49,7 @@ function checkLoginStatus() {
     })
     .then(function (data) {
       if (data.loggedIn) {
-        showApp(data.username);
+        showApp(data.username, data.isAdmin);
       } else {
         showAuth();
       }
@@ -54,11 +59,17 @@ function checkLoginStatus() {
     });
 }
 
-function showApp(username) {
+function showApp(username, isAdmin) {
   currentExplorerName = username;
+  currentIsAdmin = !!isAdmin;
   document.getElementById("page-auth").style.display = "none";
   document.getElementById("appNavbar").style.display = "block";
   document.getElementById("appMainContent").style.display = "block";
+
+  // Tampilkan/sembunyikan link Admin di navbar
+  var navAdminLink = document.getElementById("navAdminLink");
+  if (navAdminLink)
+    navAdminLink.style.display = currentIsAdmin ? "list-item" : "none";
 
   // Load initial app data
   loadSites();
@@ -118,7 +129,7 @@ function submitLogin(event) {
     .then(function (res) {
       if (res.status === 200) {
         showToast("Login Berhasil", res.body.message, "success");
-        showApp(res.body.username);
+        showApp(res.body.username, res.body.isAdmin);
       } else {
         showToast(
           "Login Gagal",
@@ -303,7 +314,13 @@ function renderSites(sites) {
       "</span>" +
       '<span class="visited-badge">Sudah Dikunjungi</span>' +
       "</div>" +
-      (s.imageUrl ? '<img src="' + s.imageUrl + '" class="site-card-img" alt="' + s.name + '">' : "") +
+      (s.imageUrl
+        ? '<img src="' +
+          s.imageUrl +
+          '" class="site-card-img" alt="' +
+          s.name +
+          '">'
+        : "") +
       "<h3>" +
       s.name +
       "</h3>" +
@@ -422,6 +439,12 @@ function updateUI(data) {
   document.getElementById("visitedCount").textContent = visited.length;
   document.getElementById("heroVisited").textContent = visited.length;
   document.getElementById("explorerName").textContent = currentExplorerName;
+
+  // Tampilkan badge Admin di kartu profil jika admin
+  var roleBadge = document.getElementById("explorerRoleBadge");
+  if (roleBadge)
+    roleBadge.style.display = currentIsAdmin ? "inline-block" : "none";
+
   document.getElementById("currentLocation").textContent = data.currentLocation
     ? data.currentLocation.name
     : "Belum ada";
@@ -508,6 +531,9 @@ function updateUI(data) {
   var badges = data.earnedBadges || [];
   document.getElementById("badgeCount").textContent = badges.length;
   renderBadges(badges);
+
+  // Refresh trail mode waypoints setelah data diperbarui
+  if (activeTrailId) refreshTrailModeIfActive();
 }
 
 function handleNewBadges(newBadges) {
@@ -732,31 +758,24 @@ function submitReview() {
 }
 
 function followTrail(trailId) {
-  fetch("/api/trail/" + trailId, { method: "POST" })
-    .then(function (r) {
-      if (r.status === 401) {
-        showAuth();
-        return Promise.reject("Unauthorized");
-      }
-      return r.json();
-    })
-    .then(function (d) {
-      showTrailResultModal(d);
-      if (d.leveledUp) {
-        showToast(
-          "Naik Level!",
-          "Selamat! Level Anda naik menjadi Level " + d.newLevel,
-          "info",
-        );
-      }
-      handleNewBadges(d.newBadges);
-      loadExplorerState();
-    })
-    .catch(function (err) {
-      if (err !== "Unauthorized") {
-        showToast("Error", "Terjadi kesalahan pada server.", "error");
-      }
-    });
+  var trail = allTrails.find(function (t) {
+    return t.id === trailId;
+  });
+  if (!trail) {
+    showToast("Error", "Trail tidak ditemukan.", "error");
+    return;
+  }
+  activeTrailId = trailId;
+  activeTrailSiteIndex = 0;
+  showPage("jelajah");
+  setTimeout(function () {
+    activateTrailMode(trailId);
+  }, 200);
+  showToast(
+    "Trail Dimulai",
+    "Ikuti urutan waypoint pada peta untuk menyelesaikan trail.",
+    "info",
+  );
 }
 
 function showTrailResultModal(data) {
@@ -1312,8 +1331,12 @@ function renderJelajahSiteMarkers() {
       className: "",
       html:
         '<div class="explore-marker-wrap">' +
-        '<div class="explore-marker-avatar" style="background-image: url(\'' + (s.imageUrl || '') + '\')"></div>' +
-        '<div class="explore-marker-dot ' + cls + '"></div>' +
+        '<div class="explore-marker-avatar" style="background-image: url(\'' +
+        (s.imageUrl || "") +
+        "')\"></div>" +
+        '<div class="explore-marker-dot ' +
+        cls +
+        '"></div>' +
         "</div>",
       iconSize: [40, 50],
       iconAnchor: [20, 50],
@@ -1321,25 +1344,37 @@ function renderJelajahSiteMarkers() {
     var marker = L.marker([s.latitude, s.longitude], { icon: icon }).addTo(
       jelajahMap,
     );
-    
+
     var popupContent =
       '<div class="explore-popup">' +
-      (s.imageUrl ? '<img src="' + s.imageUrl + '" class="explore-popup-img" alt="' + s.name + '">' : '') +
-      '<div class="explore-popup-title">' + s.name + '</div>' +
-      '<div class="explore-popup-era">' + s.era + '</div>' +
-      '<button class="explore-popup-btn" onclick="startCustomRoute(\'' + s.id + '\')">Mulai Perjalanan</button>' +
-      '</div>';
+      (s.imageUrl
+        ? '<img src="' +
+          s.imageUrl +
+          '" class="explore-popup-img" alt="' +
+          s.name +
+          '">'
+        : "") +
+      '<div class="explore-popup-title">' +
+      s.name +
+      "</div>" +
+      '<div class="explore-popup-era">' +
+      s.era +
+      "</div>" +
+      '<button class="explore-popup-btn" onclick="startCustomRoute(\'' +
+      s.id +
+      "')\">Mulai Perjalanan</button>" +
+      "</div>";
 
     marker.bindPopup(popupContent, {
       closeButton: false,
       offset: [0, -45],
-      className: "explore-leaflet-popup"
+      className: "explore-leaflet-popup",
     });
-    
+
     marker.on("mouseover", function (e) {
       this.openPopup();
     });
-    
+
     jelajahSiteMarkers[s.id] = marker;
   }
 }
@@ -1354,7 +1389,11 @@ function startCustomRoute(siteId) {
     // default/initial GPS coords fallback
     updateJelajahPlayer(3.5753, 98.6837);
   }
-  showToast("Rute Perjalanan Diubah", "Navigasi diubah menuju situs pilihan Anda.", "success");
+  showToast(
+    "Rute Perjalanan Diubah",
+    "Navigasi diubah menuju situs pilihan Anda.",
+    "success",
+  );
 }
 
 /** Perbarui posisi player, pan otomatis, update HUD dan efek situs */
@@ -1389,7 +1428,8 @@ function updateJelajahPlayer(lat, lon) {
     var ep = routeExpPoints[i];
     if (!ep.collected) {
       var distToPlayer = haversineDistance(lat, lon, ep.lat, ep.lon);
-      if (distToPlayer <= 25) { // 25 meter radius koleksi
+      if (distToPlayer <= 25) {
+        // 25 meter radius koleksi
         collectExpPoint(ep);
       }
     }
@@ -1437,7 +1477,12 @@ function updateJelajahHUD(lat, lon) {
   }
 
   nameEl.textContent = targetSite.name;
-  var d = haversineDistance(lat, lon, targetSite.latitude, targetSite.longitude);
+  var d = haversineDistance(
+    lat,
+    lon,
+    targetSite.latitude,
+    targetSite.longitude,
+  );
   var distRounded = Math.round(d);
   distEl.textContent =
     distRounded < 1000
@@ -1583,7 +1628,10 @@ function drawStraightRoute(lat1, lon1, lat2, lon2) {
       lineCap: "round",
     },
   ).addTo(jelajahMap);
-  generateRouteExpPoints([[lat1, lon1], [lat2, lon2]]);
+  generateRouteExpPoints([
+    [lat1, lon1],
+    [lat2, lon2],
+  ]);
 }
 
 /** Hapus layer rute dari peta */
@@ -1609,19 +1657,19 @@ function generateRouteExpPoints(latlngs) {
     var p2 = latlngs[1];
     var totalD = haversineDistance(p1[0], p1[1], p2[0], p2[1]);
     var numPoints = Math.floor(totalD / 120);
-    
+
     for (var k = 1; k <= numPoints; k++) {
       var ratio = k / (numPoints + 1);
       var interpLat = p1[0] + (p2[0] - p1[0]) * ratio;
       var interpLon = p1[1] + (p2[1] - p1[1]) * ratio;
-      
+
       var epId = "exp_straight_" + k;
       var ep = {
         id: epId,
         lat: interpLat,
         lon: interpLon,
         xpValue: 15,
-        collected: false
+        collected: false,
       };
       routeExpPoints.push(ep);
 
@@ -1629,16 +1677,16 @@ function generateRouteExpPoints(latlngs) {
         className: "",
         html: '<div class="exp-point-marker">★</div>',
         iconSize: [24, 24],
-        iconAnchor: [12, 12]
+        iconAnchor: [12, 12],
       });
       var marker = L.marker([ep.lat, ep.lon], { icon: icon }).addTo(jelajahMap);
       marker.bindTooltip("+15 XP", {
         permanent: false,
         direction: "top",
         className: "jelajah-tt",
-        offset: [0, -10]
+        offset: [0, -10],
       });
-      
+
       routeExpMarkers[epId] = marker;
     }
     return;
@@ -1658,7 +1706,7 @@ function generateRouteExpPoints(latlngs) {
         lat: p2[0],
         lon: p2[1],
         xpValue: 15, // 15 XP per titik bintang
-        collected: false
+        collected: false,
       };
       routeExpPoints.push(ep);
 
@@ -1667,15 +1715,15 @@ function generateRouteExpPoints(latlngs) {
         className: "",
         html: '<div class="exp-point-marker">★</div>',
         iconSize: [24, 24],
-        iconAnchor: [12, 12]
+        iconAnchor: [12, 12],
       });
       var marker = L.marker([ep.lat, ep.lon], { icon: icon }).addTo(jelajahMap);
-      
+
       marker.bindTooltip("+15 XP", {
         permanent: false,
         direction: "top",
         className: "jelajah-tt",
-        offset: [0, -10]
+        offset: [0, -10],
       });
 
       routeExpMarkers[epId] = marker;
@@ -1697,12 +1745,12 @@ function clearRouteExpMarkers() {
 
 function collectExpPoint(ep) {
   ep.collected = true;
-  
+
   if (jelajahMap && routeExpMarkers[ep.id]) {
     jelajahMap.removeLayer(routeExpMarkers[ep.id]);
     delete routeExpMarkers[ep.id];
   }
-  
+
   fetch("/api/explorer/add-xp?amount=" + ep.xpValue, { method: "POST" })
     .then(function (r) {
       if (r.status === 401) {
@@ -1713,9 +1761,17 @@ function collectExpPoint(ep) {
     })
     .then(function (res) {
       if (res && res.success) {
-        showToast("Koleksi XP", "Mendapatkan +" + ep.xpValue + " XP dari perjalanan!", "success");
+        showToast(
+          "Koleksi XP",
+          "Mendapatkan +" + ep.xpValue + " XP dari perjalanan!",
+          "success",
+        );
         if (res.leveledUp) {
-          showToast("Naik Level!", "Selamat! Level Anda naik menjadi Level " + res.newLevel, "info");
+          showToast(
+            "Naik Level!",
+            "Selamat! Level Anda naik menjadi Level " + res.newLevel,
+            "info",
+          );
         }
         loadExplorerState(); // Update tampilan Riwayat (XP progress bar & level)
       }
@@ -1741,8 +1797,12 @@ function updateJelajahSiteGlows(lat, lon) {
         className: "",
         html:
           '<div class="explore-marker-wrap">' +
-          '<div class="explore-marker-avatar" style="background-image: url(\'' + (site.imageUrl || '') + '\')"></div>' +
-          '<div class="explore-marker-dot ' + cls + '"></div>' +
+          '<div class="explore-marker-avatar" style="background-image: url(\'' +
+          (site.imageUrl || "") +
+          "')\"></div>" +
+          '<div class="explore-marker-dot ' +
+          cls +
+          '"></div>' +
           "</div>",
         iconSize: [40, 50],
         iconAnchor: [20, 50],
@@ -1968,4 +2028,191 @@ function calcBearing(lat1, lon1, lat2, lon2) {
     Math.cos(la1) * Math.sin(la2) -
     Math.sin(la1) * Math.cos(la2) * Math.cos(dLon);
   return ((Math.atan2(y, x) * 180) / Math.PI + 360) % 360;
+}
+
+// ========================================
+// TRAIL MODE — Urutan Waypoint di Jelajah
+// ========================================
+
+/**
+ * Aktifkan trail mode: tampilkan panel waypoint dan navigasi ke situs pertama
+ */
+function activateTrailMode(trailId) {
+  var trail = allTrails.find(function (t) {
+    return t.id === trailId;
+  });
+  if (!trail || !trail.route || trail.route.length === 0) return;
+
+  activeTrailId = trailId;
+  // Mulai dari situs pertama yang belum dikunjungi
+  activeTrailSiteIndex = 0;
+  for (var i = 0; i < trail.route.length; i++) {
+    if (!isVisited(trail.route[i].id)) {
+      activeTrailSiteIndex = i;
+      break;
+    }
+    // Jika semua dikunjungi, set ke terakhir
+    if (i === trail.route.length - 1) {
+      activeTrailSiteIndex = trail.route.length - 1;
+    }
+  }
+
+  renderTrailModePanel(trail);
+  // Arahkan navigasi ke waypoint aktif
+  var targetSite = trail.route[activeTrailSiteIndex];
+  if (targetSite) {
+    customRouteTargetId = targetSite.id;
+    lastRouteTargetId = null;
+    if (userLocationMarker) {
+      var ll = userLocationMarker.getLatLng();
+      updateJelajahPlayer(ll.lat, ll.lng);
+    }
+  }
+}
+
+/**
+ * Render panel trail mode dengan daftar waypoint bernomor
+ */
+function renderTrailModePanel(trail) {
+  var panel = document.getElementById("trailModePanel");
+  var titleEl = document.getElementById("trailModeName");
+  var waypointsEl = document.getElementById("trailModeWaypoints");
+  if (!panel || !titleEl || !waypointsEl) return;
+
+  titleEl.textContent = trail.name;
+  waypointsEl.innerHTML = "";
+
+  for (var i = 0; i < trail.route.length; i++) {
+    var site = trail.route[i];
+    var visited = isVisited(site.id);
+    var isCurrent = i === activeTrailSiteIndex;
+
+    var item = document.createElement("div");
+    item.className =
+      "trail-waypoint-item" +
+      (visited ? " wp-visited" : "") +
+      (isCurrent && !visited ? " wp-current" : "");
+
+    var letter = String.fromCharCode(65 + i); // A, B, C, ...
+    item.innerHTML =
+      '<div class="wp-badge' +
+      (visited ? " wp-badge-done" : isCurrent ? " wp-badge-active" : "") +
+      '">' +
+      (visited ? "✓" : letter) +
+      "</div>" +
+      '<div class="wp-info">' +
+      '<span class="wp-name">' +
+      site.name +
+      "</span>" +
+      '<span class="wp-status">' +
+      (visited ? "Selesai" : isCurrent ? "Tujuan Sekarang" : "Menunggu") +
+      "</span>" +
+      "</div>" +
+      (isCurrent && !visited
+        ? '<button class="wp-nav-btn" onclick="navigateToWaypoint(\'' +
+          site.id +
+          "')\">Navigasi</button>"
+        : "");
+
+    // Tambah konektor vertikal antar waypoint (kecuali terakhir)
+    if (i < trail.route.length - 1) {
+      var connector = document.createElement("div");
+      connector.className =
+        "wp-connector" + (visited ? " wp-connector-done" : "");
+      waypointsEl.appendChild(item);
+      waypointsEl.appendChild(connector);
+    } else {
+      waypointsEl.appendChild(item);
+    }
+  }
+
+  panel.style.display = "flex";
+}
+
+/**
+ * Navigasi ke waypoint tertentu (panggil dari tombol "Navigasi" di panel)
+ */
+function navigateToWaypoint(siteId) {
+  customRouteTargetId = siteId;
+  lastRouteTargetId = null;
+  if (userLocationMarker) {
+    var ll = userLocationMarker.getLatLng();
+    updateJelajahPlayer(ll.lat, ll.lng);
+  } else {
+    updateJelajahPlayer(3.5833, 98.6833);
+  }
+  showToast(
+    "Navigasi Diperbarui",
+    "Navigasi menuju waypoint berikutnya.",
+    "info",
+  );
+}
+
+/**
+ * Tutup trail mode
+ */
+function closeTrailMode() {
+  activeTrailId = null;
+  activeTrailSiteIndex = 0;
+  customRouteTargetId = null;
+  lastRouteTargetId = null;
+  clearJelajahRoute();
+  var panel = document.getElementById("trailModePanel");
+  if (panel) panel.style.display = "none";
+}
+
+/**
+ * Refresh panel trail mode setelah kunjungan situs (dipanggil dari updateUI)
+ * Panggil ini setelah UI diupdate agar badge visited terupdate
+ */
+function refreshTrailModeIfActive() {
+  if (!activeTrailId) return;
+  var trail = allTrails.find(function (t) {
+    return t.id === activeTrailId;
+  });
+  if (!trail) return;
+
+  // Cek apakah semua situs dikunjungi → trail selesai
+  var allVisited = trail.route.every(function (s) {
+    return isVisited(s.id);
+  });
+  if (allVisited) {
+    showToast(
+      "Trail Selesai! 🎉",
+      "Selamat! Kamu telah menyelesaikan trail " + trail.name + ".",
+      "success",
+    );
+    // Lakukan followTrail backend untuk award badge
+    fetch("/api/trail/" + activeTrailId, { method: "POST" })
+      .then(function (r) {
+        return r.json();
+      })
+      .then(function (d) {
+        handleNewBadges(d.newBadges);
+        loadExplorerState();
+      })
+      .catch(function () {});
+    closeTrailMode();
+    return;
+  }
+
+  // Update index ke situs berikutnya yang belum dikunjungi
+  for (var i = 0; i < trail.route.length; i++) {
+    if (!isVisited(trail.route[i].id)) {
+      activeTrailSiteIndex = i;
+      break;
+    }
+  }
+  renderTrailModePanel(trail);
+
+  // Update target navigasi ke waypoint baru
+  var nextSite = trail.route[activeTrailSiteIndex];
+  if (nextSite && customRouteTargetId !== nextSite.id) {
+    customRouteTargetId = nextSite.id;
+    lastRouteTargetId = null;
+    if (userLocationMarker) {
+      var ll = userLocationMarker.getLatLng();
+      updateJelajahPlayer(ll.lat, ll.lng);
+    }
+  }
 }
