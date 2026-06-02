@@ -41,6 +41,7 @@ public class AuthController {
             res.put("success", true);
             res.put("message", "Login berhasil!");
             res.put("username", explorer.getUsername());
+            res.put("isAdmin", explorer.isAdmin());
             return ResponseEntity.ok(res);
         }
         return ResponseEntity.status(401).body(Map.of("success", false, "message", "Username atau password salah."));
@@ -62,6 +63,8 @@ public class AuthController {
                 Map<String, Object> res = new LinkedHashMap<>();
                 res.put("loggedIn", true);
                 res.put("username", explorer.getUsername());
+                res.put("isAdmin", explorer.isAdmin());
+                res.put("email", explorer.getEmail());
                 return ResponseEntity.ok(res);
             }
         }

@@ -48,34 +48,63 @@ public class HeritageService {
             if (inputStream != null) {
                 SeedData seed = mapper.readValue(inputStream, SeedData.class);
 
-                // Initialize Sites if empty
                 if (siteRepository.count() == 0 && seed.sites != null) {
+                    for (HeritageSite s : seed.sites) {
+                        s.setQrCodeToken("qr-" + s.getId().toLowerCase());
+                    }
                     siteRepository.saveAll(seed.sites);
                 }
 
-                // Initialize Badges if empty
-                if (badgeRepository.count() == 0 && seed.badges != null) {
-                    badgeRepository.saveAll(seed.badges);
+                List<HeritageSite> allSites = siteRepository.findAll();
+                for (HeritageSite s : allSites) {
+                    if (s.getQrCodeToken() == null || s.getQrCodeToken().trim().isEmpty()) {
+                        s.setQrCodeToken("qr-" + s.getId().toLowerCase());
+                        siteRepository.save(s);
+                    }
                 }
 
-                // Initialize Trails in Database if empty
-                if (trailRepository.count() == 0 && seed.trails != null) {
-                    for (TrailSeed ts : seed.trails) {
-                        List<HeritageSite> route = new ArrayList<>();
-                        if (ts.routeSiteIds != null) {
-                            for (String siteId : ts.routeSiteIds) {
-                                siteRepository
-                                    .findById(siteId)
-                                    .ifPresent(route::add);
-                            }
+                // Upsert Badges by ID (seed yang belum ada)
+                if (seed.badges != null) {
+                    for (com.medanheritage.model.Badge b : seed.badges) {
+                        if (!badgeRepository.existsById(b.getId())) {
+                            badgeRepository.save(b);
                         }
-                        trailRepository.save(new Trail(ts.id, ts.name, route));
+                    }
+                }
+
+                // Upsert Trails by ID (seed yang belum ada)
+                if (seed.trails != null) {
+                    for (TrailSeed ts : seed.trails) {
+                        if (!trailRepository.existsById(ts.id)) {
+                            List<HeritageSite> route = new ArrayList<>();
+                            if (ts.routeSiteIds != null) {
+                                for (String siteId : ts.routeSiteIds) {
+                                    siteRepository
+                                        .findById(siteId)
+                                        .ifPresent(route::add);
+                                }
+                            }
+                            trailRepository.save(new Trail(ts.id, ts.name, route));
+                        }
                     }
                 }
             }
         } catch (Exception e) {
             e.printStackTrace();
         }
+
+        Optional<Explorer> existingAdmin = explorerRepository.findByUsername("admin@jejakdeli");
+        if (existingAdmin.isPresent()) {
+            Explorer admin = existingAdmin.get();
+            admin.setPassword(passwordEncoder.encode("admin123"));
+            admin.setRole("ADMIN");
+            explorerRepository.save(admin);
+        } else {
+            Explorer admin = new Explorer("admin@jejakdeli", "admin@jejakdeli.com",
+                passwordEncoder.encode("admin123"), "ADMIN");
+            explorerRepository.save(admin);
+        }
+
     }
 
     private static class SeedData {
@@ -173,9 +202,12 @@ public class HeritageService {
 
     public Explorer authenticateUser(String username, String password) {
         if (username == null || password == null) return null;
-        Optional<Explorer> opt = explorerRepository.findByUsername(
-            username.trim()
-        );
+        Optional<Explorer> opt;
+        if (username.contains("@")) {
+            opt = explorerRepository.findByEmail(username.trim());
+        } else {
+            opt = explorerRepository.findByUsername(username.trim());
+        }
         if (opt.isPresent()) {
             Explorer exp = opt.get();
             if (passwordEncoder.matches(password.trim(), exp.getPassword())) {
@@ -245,6 +277,61 @@ public class HeritageService {
         result.put(
             "message",
             "Jawaban Benar! Berhasil mengunjungi " + site.getName() + "."
+        );
+        result.put("site", site);
+        result.put("newBadges", newBadges);
+        result.put("leveledUp", leveledUp);
+        result.put("xpGained", 100);
+        result.put("newLevel", explorer.getLevel());
+        result.put("newXp", explorer.getXp());
+        return result;
+    }
+
+    public Map<String, Object> visitSiteViaQr(
+        String qrToken,
+        Long explorerId
+    ) {
+        Map<String, Object> result = new LinkedHashMap<>();
+        if (qrToken == null || qrToken.trim().isEmpty()) {
+            result.put("success", false);
+            result.put("message", "Token QR Code tidak valid.");
+            return result;
+        }
+
+        HeritageSite site = siteRepository.findByQrCodeToken(qrToken.trim()).orElse(null);
+        if (site == null) {
+            result.put("success", false);
+            result.put("message", "Situs dengan QR Code tersebut tidak ditemukan.");
+            return result;
+        }
+
+        Explorer explorer = getExplorerById(explorerId);
+        if (explorer == null) {
+            result.put("success", false);
+            result.put("message", "Pengguna tidak aktif. Silakan login.");
+            return result;
+        }
+
+        if (explorer.hasVisited(site.getId())) {
+            result.put("success", false);
+            result.put(
+                "message",
+                "Anda sudah pernah mengunjungi " + site.getName() + "."
+            );
+            return result;
+        }
+
+        explorer.visit(site);
+        boolean leveledUp = explorer.addXp(100);
+        explorerRepository.save(explorer);
+
+        List<Badge> newBadges = checkAndAwardBadges(explorer);
+        explorerRepository.save(explorer);
+
+        result.put("success", true);
+        result.put(
+            "message",
+            "QR Code Terverifikasi! Berhasil mengunjungi " + site.getName() + "."
         );
         result.put("site", site);
         result.put("newBadges", newBadges);
@@ -510,5 +597,88 @@ public class HeritageService {
                 }
             }
         }
+    }
+
+    // ===== ADMIN: SITE CRUD =====
+
+    public HeritageSite createSite(HeritageSite site) {
+        return siteRepository.save(site);
+    }
+
+    public HeritageSite updateSite(String id, HeritageSite updated) {
+        HeritageSite existing = siteRepository.findById(id).orElse(null);
+        if (existing == null) return null;
+        existing.setName(updated.getName());
+        existing.setLatitude(updated.getLatitude());
+        existing.setLongitude(updated.getLongitude());
+        existing.setDescription(updated.getDescription());
+        existing.setEra(updated.getEra());
+        existing.setStatus(updated.getStatus());
+        existing.setImageUrl(updated.getImageUrl());
+        existing.setQrCodeToken(updated.getQrCodeToken());
+        if (updated.getQuiz() != null) {
+            existing.setQuiz(updated.getQuiz());
+        }
+        return siteRepository.save(existing);
+    }
+
+    public boolean deleteSite(String id) {
+        if (!siteRepository.existsById(id)) return false;
+        siteRepository.deleteById(id);
+        return true;
+    }
+
+    // ===== ADMIN: TRAIL CRUD =====
+
+    public Trail createTrail(String id, String name, List<String> siteIds) {
+        List<HeritageSite> route = new ArrayList<>();
+        for (String sid : siteIds) {
+            siteRepository.findById(sid).ifPresent(route::add);
+        }
+        Trail trail = new Trail(id, name, route);
+        return trailRepository.save(trail);
+    }
+
+    public Trail updateTrail(String id, String name, List<String> siteIds) {
+        Trail existing = trailRepository.findById(id).orElse(null);
+        if (existing == null) return null;
+        existing.setName(name);
+        List<HeritageSite> route = new ArrayList<>();
+        for (String sid : siteIds) {
+            siteRepository.findById(sid).ifPresent(route::add);
+        }
+        existing.setRoute(route);
+        return trailRepository.save(existing);
+    }
+
+    public boolean deleteTrail(String id) {
+        if (!trailRepository.existsById(id)) return false;
+        trailRepository.deleteById(id);
+        return true;
+    }
+
+    // ===== ADMIN: BADGE CRUD =====
+
+    public com.medanheritage.model.Badge createBadge(com.medanheritage.model.Badge badge) {
+        return badgeRepository.save(badge);
+    }
+
+    public com.medanheritage.model.Badge updateBadge(String id, com.medanheritage.model.Badge updated) {
+        com.medanheritage.model.Badge existing = badgeRepository.findById(id).orElse(null);
+        if (existing == null) return null;
+        existing.setName(updated.getName());
+        existing.setTrailId(updated.getTrailId());
+        existing.setDescription(updated.getDescription());
+        return badgeRepository.save(existing);
+    }
+
+    public boolean deleteBadge(String id) {
+        if (!badgeRepository.existsById(id)) return false;
+        badgeRepository.deleteById(id);
+        return true;
+    }
+
+    public List<Explorer> getAllExplorers() {
+        return explorerRepository.findAll();
     }
 }

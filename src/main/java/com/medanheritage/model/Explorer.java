@@ -14,10 +14,10 @@ public class Explorer {
 
     @Column(unique = true)
     private String username;
-    
+
     @com.fasterxml.jackson.annotation.JsonIgnore
     private String password;
-    
+
     private String name;
 
     @ManyToOne
@@ -45,6 +45,11 @@ public class Explorer {
     private int xp;
     private int level = 1;
 
+    private String email;
+
+    @Column(name = "role")
+    private String role = "USER";
+
     public Explorer() {
         this.visitedSites = new ArrayList<>();
         this.earnedBadges = new ArrayList<>();
@@ -54,6 +59,18 @@ public class Explorer {
         this.username = username;
         this.password = password;
         this.name = username;
+        this.visitedSites = new ArrayList<>();
+        this.earnedBadges = new ArrayList<>();
+        this.xp = 0;
+        this.level = 1;
+    }
+
+    public Explorer(String username, String email, String password, String role) {
+        this.username = username;
+        this.email = email;
+        this.password = password;
+        this.name = username;
+        this.role = role;
         this.visitedSites = new ArrayList<>();
         this.earnedBadges = new ArrayList<>();
         this.xp = 0;
@@ -131,6 +148,14 @@ public class Explorer {
     public void setLevel(int level) {
         this.level = level;
     }
+
+    public String getEmail() { return email; }
+    public void setEmail(String email) { this.email = email; }
+
+    public String getRole() { return role; }
+    public void setRole(String role) { this.role = role; }
+
+    public boolean isAdmin() { return "ADMIN".equals(this.role); }
 
     public boolean addXp(int amount) {
         this.xp += amount;
