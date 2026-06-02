@@ -12,7 +12,7 @@
             rel="stylesheet"
             href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
         />
-        <link rel="stylesheet" href="/css/style.css?v=1.3" />
+        <link rel="stylesheet" href="/css/style.css?v=1.4" />
     </head>
     <body>
         <!-- MAIN NAVBAR (Hidden by default, shown after login) -->
@@ -461,36 +461,7 @@
                         ></div>
                     </div>
 
-                    <!-- AR Mode Toggle -->
-                    <button
-                        class="btn-ar-toggle"
-                        id="btnARToggle"
-                        onclick="toggleARMode()"
-                    >
-                        AR Mode
-                    </button>
 
-                    <!-- AR View (camera + canvas overlay) -->
-                    <div id="arView" style="display: none">
-                        <video id="arCamera" autoplay playsinline muted></video>
-                        <canvas id="arCanvas"></canvas>
-                    </div>
-
-                    <!-- Arrival Alert (shown when entering geofence radius) -->
-                    <div
-                        class="jelajah-arrival-alert"
-                        id="jelajahArrivalAlert"
-                        style="display: none"
-                    >
-                        <div class="arrival-info">
-                            <span class="arrival-title" id="arrivalSiteName"
-                                >Nama Situs</span
-                            >
-                            <span class="arrival-sub"
-                                >Kunjungan otomatis tercatat</span
-                            >
-                        </div>
-                    </div>
                 </div>
             </section>
 
@@ -861,17 +832,28 @@
         </div>
 
         <div class="modal-overlay" id="qrScannerModal" onclick="closeQrScanner()" style="display: none; align-items: center; justify-content: center; z-index: 9999;">
-            <div class="modal" onclick="event.stopPropagation()" style="max-width: 480px; width: 90%; background: #1a1a2e; color: #ffffff; border-radius: 12px; padding: 20px; box-shadow: var(--shadow-md); border: 1px solid rgba(255, 255, 255, 0.1);">
-                <h3 style="margin-bottom: 8px;">Pindai QR Code Situs</h3>
-                <p class="modal-subtitle" style="color: rgba(255,255,255,0.7); font-size: 13px; margin-bottom: 16px;">
+            <div class="modal qr-scanner-modal" onclick="event.stopPropagation()">
+                <h3 class="qr-scanner-title">Pindai QR Code Situs</h3>
+                <p class="modal-subtitle qr-scanner-subtitle">
                     Arahkan kamera perangkat Anda ke QR Code situs untuk check-in instan.
                 </p>
-                <div id="qr-reader" style="width: 100%; border-radius: 8px; overflow: hidden; background: #000; border: 1px solid rgba(255,255,255,0.15);"></div>
-                <div style="display: flex; gap: 10px; margin-top: 20px;">
-                    <button class="btn-visit" id="btn-toggle-torch" onclick="toggleFlashlight()" style="flex: 1; padding: 10px; background-color: var(--teal); border: none; border-radius: 6px; color: #fff; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px;">
-                        Senter
+                <div class="qr-scanner-wrapper">
+                    <div id="qr-reader"></div>
+                    <div class="qr-scanner-overlay">
+                        <div class="scan-region-highlight">
+                            <div class="scanner-corner top-left"></div>
+                            <div class="scanner-corner top-right"></div>
+                            <div class="scanner-corner bottom-left"></div>
+                            <div class="scanner-corner bottom-right"></div>
+                            <div class="scanner-laser"></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="qr-scanner-actions">
+                    <button class="btn-visit btn-toggle-torch" id="btn-toggle-torch" onclick="toggleFlashlight()">
+                        <span class="torch-icon">🔦</span> <span id="torch-label">Senter</span>
                     </button>
-                    <button class="btn-close-modal" onclick="closeQrScanner()" style="flex: 1; padding: 10px; background-color: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); border-radius: 6px; color: #fff; font-weight: 600; cursor: pointer;">
+                    <button class="btn-close-modal btn-cancel-scanner" onclick="closeQrScanner()">
                         Batal
                     </button>
                 </div>
@@ -880,6 +862,6 @@
 
         <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
         <script src="https://unpkg.com/html5-qrcode"></script>
-        <script src="/js/app.js?v=1.3"></script>
+        <script src="/js/app.js?v=1.5"></script>
     </body>
 </html>

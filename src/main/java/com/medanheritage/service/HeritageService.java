@@ -427,20 +427,61 @@ public class HeritageService {
             if (explorer.hasBadge(badge.getId())) {
                 continue;
             }
-            Trail trail = trailRepository
-                .findById(badge.getTrailId())
-                .orElse(null);
-            if (trail == null) {
-                continue;
+
+            String conditionType = badge.getConditionType();
+            // Default to TRAIL for backward compatibility
+            if (conditionType == null || conditionType.isEmpty()) {
+                conditionType = "TRAIL";
             }
-            boolean allVisited = true;
-            for (HeritageSite site : trail.getRoute()) {
-                if (!explorer.hasVisited(site.getId())) {
-                    allVisited = false;
-                    break;
+
+            boolean earned = false;
+
+            if ("TRAIL".equals(conditionType)) {
+                // Original logic: check all sites in the trail are visited
+                if (badge.getTrailId() != null && !badge.getTrailId().isEmpty()) {
+                    Trail trail = trailRepository
+                        .findById(badge.getTrailId())
+                        .orElse(null);
+                    if (trail != null) {
+                        boolean allVisited = true;
+                        for (HeritageSite site : trail.getRoute()) {
+                            if (!explorer.hasVisited(site.getId())) {
+                                allVisited = false;
+                                break;
+                            }
+                        }
+                        earned = allVisited;
+                    }
+                }
+            } else if ("CATEGORY".equals(conditionType)) {
+                // Check all sites with matching status/category are visited
+                String category = badge.getCategoryName();
+                if (category != null && !category.isEmpty()) {
+                    List<HeritageSite> categorySites = siteRepository.findAll();
+                    boolean allCategoryVisited = true;
+                    boolean hasSites = false;
+                    for (HeritageSite site : categorySites) {
+                        if (category.equalsIgnoreCase(site.getStatus())) {
+                            hasSites = true;
+                            if (!explorer.hasVisited(site.getId())) {
+                                allCategoryVisited = false;
+                                break;
+                            }
+                        }
+                    }
+                    earned = hasSites && allCategoryVisited;
+                }
+            } else if ("CUSTOM".equals(conditionType)) {
+                // Check if explorer has visited >= requiredVisits sites
+                Integer requiredVisits = badge.getRequiredVisits();
+                if (requiredVisits != null && requiredVisits > 0) {
+                    int visitedCount = explorer.getVisitedSites() != null
+                        ? explorer.getVisitedSites().size() : 0;
+                    earned = visitedCount >= requiredVisits;
                 }
             }
-            if (allVisited) {
+
+            if (earned) {
                 explorer.addBadge(badge);
                 newlyEarned.add(badge);
             }
@@ -669,6 +710,11 @@ public class HeritageService {
         existing.setName(updated.getName());
         existing.setTrailId(updated.getTrailId());
         existing.setDescription(updated.getDescription());
+        existing.setConditionType(updated.getConditionType());
+        existing.setCategoryName(updated.getCategoryName());
+        existing.setRequiredVisits(updated.getRequiredVisits());
+        existing.setTimePeriodValue(updated.getTimePeriodValue());
+        existing.setTimePeriodUnit(updated.getTimePeriodUnit());
         return badgeRepository.save(existing);
     }
 

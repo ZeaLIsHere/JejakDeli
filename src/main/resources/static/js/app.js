@@ -50,9 +50,7 @@ var jelajahMap = null;
 var jelajahPlayerMarker = null;
 var jelajahSiteMarkers = {};
 var jelajahDirLine = null;
-var isARMode = false;
-var arStream = null;
-var arRafId = null;
+// AR Mode variables removed
 var deviceHeading = 0;
 var arrivalAlertTimer = null;
 var jelajahRouteLayer = null; // rute jalan OSRM
@@ -274,7 +272,7 @@ document.addEventListener("click", function (e) {
   }
 });
 
-function showToast(title, message, type) {
+function showToast(title, message, type, action) {
   var container = document.getElementById("toastContainer");
   var toast = document.createElement("div");
   toast.className = "toast " + type;
@@ -284,13 +282,29 @@ function showToast(title, message, type) {
     '</div><div class="toast-message">' +
     message +
     "</div>";
-  container.appendChild(toast);
-  setTimeout(function () {
-    toast.classList.add("removing");
-    setTimeout(function () {
+
+  if (action && action.text && action.callback) {
+    var btn = document.createElement("button");
+    btn.className = "toast-action-btn";
+    btn.textContent = action.text;
+    btn.onclick = function (e) {
+      e.stopPropagation();
+      action.callback();
       toast.remove();
-    }, 300);
-  }, 3500);
+    };
+    toast.appendChild(btn);
+  }
+
+  container.appendChild(toast);
+  var duration = action ? 6000 : 3500;
+  setTimeout(function () {
+    if (toast.parentNode) {
+      toast.classList.add("removing");
+      setTimeout(function () {
+        if (toast.parentNode) toast.remove();
+      }, 300);
+    }
+  }, duration);
 }
 
 // 4. SEARCH & FILTER SITES
@@ -1237,24 +1251,17 @@ function checkGeofencingBackend(lat, lon) {
       if (!data || !data.success) return;
 
       if (data.autoVisited && data.autoVisited.length > 0) {
-        var onJelajah = document
-          .getElementById("page-jelajah")
-          .classList.contains("active");
         for (var i = 0; i < data.autoVisited.length; i++) {
           var s = data.autoVisited[i];
-          if (onJelajah) {
-            showArrivalAlert(s.siteName);
-          } else {
-            showToast(
-              "Lokasi Terdeteksi",
-              'Kunjungan ke "' +
-                s.siteName +
-                '" otomatis tercatat (jarak: ' +
-                s.distance +
-                " m)",
-              "success",
-            );
-          }
+          showToast(
+            "Lokasi Terdeteksi",
+            'Kunjungan ke "' + s.siteName + '" otomatis tercatat (jarak: ' + s.distance + " m)",
+            "success",
+            {
+              text: "Pindai QR Code",
+              callback: openQrScanner
+            }
+          );
           logActivity("visit", "Mengunjungi situs " + s.siteName + ".");
           if (customRouteTargetId === s.siteId) {
             customRouteTargetId = null;
@@ -1437,20 +1444,27 @@ function handleArrivalAtDestination() {
   });
   if (!site) return;
 
-  var confirmVisit = confirm("Anda telah sampai di " + site.name + "! Apakah Anda ingin mengunjungi dan menjawab kuis?");
-  if (confirmVisit) {
-    openQuizModal(site.id);
-    if (activeTrailId) {
-      shouldConfirmNextWaypoint = true;
-      completedSiteName = site.name;
+  showArrivalPopup({
+    title: "Anda Telah Sampai!",
+    siteName: site.name,
+    message: 'Anda telah tiba di <strong>"' + site.name + '"</strong>. Apakah Anda ingin mengunjungi situs dan menjawab kuis?',
+    confirmText: "Kunjungi & Kuis",
+    cancelText: "Nanti Saja",
+    onConfirm: function () {
+      openQuizModal(site.id);
+      if (activeTrailId) {
+        shouldConfirmNextWaypoint = true;
+        completedSiteName = site.name;
+      }
+    },
+    onCancel: function () {
+      if (activeTrailId) {
+        shouldConfirmNextWaypoint = true;
+        completedSiteName = site.name;
+        refreshTrailModeIfActive();
+      }
     }
-  } else {
-    if (activeTrailId) {
-      shouldConfirmNextWaypoint = true;
-      completedSiteName = site.name;
-      refreshTrailModeIfActive();
-    }
-  }
+  });
 }
 
 // ========================================
@@ -1563,9 +1577,12 @@ function renderJelajahSiteMarkers() {
       '<div class="explore-popup-era">' +
       s.era +
       "</div>" +
+      '<div style="display: flex; flex-direction: column; gap: 6px; margin-top: 8px;">' +
       '<button class="explore-popup-btn" onclick="startCustomRoute(\'' +
       s.id +
       "')\">Mulai Perjalanan</button>" +
+      '<button class="explore-popup-btn btn-scan-qr" onclick="openQrScanner()" style="background-color: var(--yellow); color: var(--text-dark);">Pindai QR Code</button>' +
+      '</div>' +
       "</div>";
 
     marker.bindPopup(popupContent, {
@@ -2019,23 +2036,6 @@ function updateJelajahSiteGlows(lat, lon) {
   }
 }
 
-/** Alert kedatangan gaya Pokémon GO encounter */
-function showArrivalAlert(siteName) {
-  var el = document.getElementById("jelajahArrivalAlert");
-  var nameEl = document.getElementById("arrivalSiteName");
-  if (!el || !nameEl) return;
-  nameEl.textContent = siteName;
-  el.style.display = "flex";
-  // Re-trigger CSS animation
-  el.style.animation = "none";
-  el.offsetHeight; // reflow
-  el.style.animation = "";
-  if (arrivalAlertTimer) clearTimeout(arrivalAlertTimer);
-  arrivalAlertTimer = setTimeout(function () {
-    el.style.display = "none";
-  }, 4500);
-}
-
 // ---- Kompas ----
 function onDeviceOrientation(e) {
   var h =
@@ -2044,198 +2044,6 @@ function onDeviceOrientation(e) {
   deviceHeading = h;
   var needle = document.getElementById("compassNeedle");
   if (needle) needle.style.transform = "translateX(-50%) rotate(" + -h + "deg)";
-}
-
-// ---- Mode AR ----
-function toggleARMode() {
-  isARMode = !isARMode;
-  var arView = document.getElementById("arView");
-  var btn = document.getElementById("btnARToggle");
-  if (isARMode) {
-    arView.style.display = "block";
-    if (btn) {
-      btn.classList.add("active");
-      btn.textContent = "Map Mode";
-    }
-    startARMode();
-  } else {
-    arView.style.display = "none";
-    if (btn) {
-      btn.classList.remove("active");
-      btn.textContent = "AR Mode";
-    }
-    stopARMode();
-  }
-}
-
-function startARMode() {
-  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-    showToast(
-      "AR Tidak Tersedia",
-      "Kamera tidak didukung browser ini.",
-      "error",
-    );
-    isARMode = false;
-    document.getElementById("arView").style.display = "none";
-    return;
-  }
-  navigator.mediaDevices
-    .getUserMedia({ video: { facingMode: "environment" } })
-    .then(function (stream) {
-      arStream = stream;
-      var video = document.getElementById("arCamera");
-      video.srcObject = stream;
-      video.play();
-      runARCanvas();
-    })
-    .catch(function () {
-      showToast(
-        "Kamera Ditolak",
-        "Aktifkan izin kamera untuk mode AR.",
-        "error",
-      );
-      isARMode = false;
-      document.getElementById("arView").style.display = "none";
-      var btn = document.getElementById("btnARToggle");
-      if (btn) {
-        btn.classList.remove("active");
-        btn.textContent = "AR Mode";
-      }
-    });
-}
-
-function stopARMode() {
-  if (arStream) {
-    arStream.getTracks().forEach(function (t) {
-      t.stop();
-    });
-    arStream = null;
-  }
-  if (arRafId) {
-    cancelAnimationFrame(arRafId);
-    arRafId = null;
-  }
-}
-
-/** Loop canvas AR — gambar beacon situs berdasarkan arah kompas */
-function runARCanvas() {
-  var canvas = document.getElementById("arCanvas");
-  var ctx = canvas.getContext("2d");
-  var HFOV = 60;
-
-  function frame() {
-    if (!isARMode) return;
-    canvas.width = canvas.offsetWidth || window.innerWidth;
-    canvas.height = canvas.offsetHeight || window.innerHeight;
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-    var userLL = userLocationMarker ? userLocationMarker.getLatLng() : null;
-    if (!userLL) {
-      ctx.font = "bold 16px Inter, sans-serif";
-      ctx.fillStyle = "rgba(255,255,255,0.55)";
-      ctx.textAlign = "center";
-      ctx.fillText(
-        "Menunggu sinyal GPS...",
-        canvas.width / 2,
-        canvas.height / 2,
-      );
-      arRafId = requestAnimationFrame(frame);
-      return;
-    }
-
-    var uLat = userLL.lat,
-      uLon = userLL.lng,
-      cx = canvas.width / 2;
-
-    for (var i = 0; i < allSites.length; i++) {
-      var s = allSites[i];
-      var dist = haversineDistance(uLat, uLon, s.latitude, s.longitude);
-      var bear = calcBearing(uLat, uLon, s.latitude, s.longitude);
-      var rel = bear - deviceHeading;
-      while (rel > 180) rel -= 360;
-      while (rel < -180) rel += 360;
-      if (Math.abs(rel) > HFOV / 2 + 5) continue;
-
-      var sx = cx + (rel / (HFOV / 2)) * cx;
-      var sy = canvas.height * 0.32;
-      var r = dist <= GEOFENCE_RADIUS_M ? 28 : 18;
-      var visited = isVisited(s.id);
-      var inRange = dist <= GEOFENCE_RADIUS_M;
-
-      // Aura glow saat in-range
-      if (inRange && !visited) {
-        ctx.beginPath();
-        ctx.arc(sx, sy, r + 14, 0, Math.PI * 2);
-        ctx.fillStyle = "rgba(230,184,0,0.14)";
-        ctx.fill();
-      }
-
-      // Beacon lingkaran
-      ctx.beginPath();
-      ctx.arc(sx, sy, r, 0, Math.PI * 2);
-      ctx.fillStyle = visited
-        ? "rgba(46,125,50,0.88)"
-        : inRange
-          ? "rgba(230,184,0,0.92)"
-          : "rgba(255,255,255,0.72)";
-      ctx.fill();
-      ctx.strokeStyle = "#fff";
-      ctx.lineWidth = 2;
-      ctx.stroke();
-
-      // Batang bawah
-      ctx.beginPath();
-      ctx.moveTo(sx, sy + r);
-      ctx.lineTo(sx, sy + r + 18);
-      ctx.strokeStyle = "rgba(255,255,255,0.45)";
-      ctx.lineWidth = 1.5;
-      ctx.stroke();
-
-      ctx.save();
-      ctx.shadowColor = "rgba(0,0,0,0.85)";
-      ctx.shadowBlur = 5;
-      ctx.textAlign = "center";
-
-      ctx.font = "bold 13px Inter, sans-serif";
-      ctx.fillStyle = "#fff";
-      ctx.fillText(s.name, sx, sy + r + 35);
-
-      var dLabel =
-        dist < 1000
-          ? Math.round(dist) + " m"
-          : (dist / 1000).toFixed(1) + " km";
-      ctx.font = "bold 12px Courier New";
-      ctx.fillStyle = inRange ? "#e6b800" : "rgba(255,255,255,0.7)";
-      ctx.fillText(dLabel, sx, sy + r + 51);
-
-      ctx.restore();
-    }
-
-    // Crosshair
-    ctx.strokeStyle = "rgba(255,255,255,0.28)";
-    ctx.lineWidth = 1;
-    ctx.beginPath();
-    ctx.moveTo(cx - 14, canvas.height / 2);
-    ctx.lineTo(cx + 14, canvas.height / 2);
-    ctx.moveTo(cx, canvas.height / 2 - 14);
-    ctx.lineTo(cx, canvas.height / 2 + 14);
-    ctx.stroke();
-
-    arRafId = requestAnimationFrame(frame);
-  }
-  frame();
-}
-
-/** Hitung bearing (0–360°) dari titik 1 ke titik 2 */
-function calcBearing(lat1, lon1, lat2, lon2) {
-  var dLon = ((lon2 - lon1) * Math.PI) / 180;
-  var la1 = (lat1 * Math.PI) / 180;
-  var la2 = (lat2 * Math.PI) / 180;
-  var y = Math.sin(dLon) * Math.cos(la2);
-  var x =
-    Math.cos(la1) * Math.sin(la2) -
-    Math.sin(la1) * Math.cos(la2) * Math.cos(dLon);
-  return ((Math.atan2(y, x) * 180) / Math.PI + 360) % 360;
 }
 
 // ========================================
@@ -2427,16 +2235,25 @@ function refreshTrailModeIfActive() {
     renderTrailModePanel(trail);
 
     var nextSiteName = nextSite ? nextSite.name : "";
-    var goNext = confirm("Sampai di " + completedSiteName + "! Lanjut ke tujuan berikutnya: " + nextSiteName + "?");
-    if (goNext && nextSite) {
-      customRouteTargetId = nextSite.id;
-      lastRouteTargetId = null;
-      setTimeout(function() {
-        if (!isSimulatingWalk) {
-          toggleWalkSimulation();
+    showArrivalPopup({
+      title: "Waypoint Selesai!",
+      siteName: completedSiteName,
+      message: 'Berhasil sampai di <strong>"' + completedSiteName + '"</strong>! Lanjut ke tujuan berikutnya: <strong>"' + nextSiteName + '"</strong>?',
+      confirmText: "Lanjut Navigasi",
+      cancelText: "Berhenti Dulu",
+      onConfirm: function () {
+        if (nextSite) {
+          customRouteTargetId = nextSite.id;
+          lastRouteTargetId = null;
+          setTimeout(function() {
+            if (!isSimulatingWalk) {
+              toggleWalkSimulation();
+            }
+          }, 800);
         }
-      }, 800);
-    }
+      },
+      onCancel: function () {}
+    });
   } else {
     activeTrailSiteIndex = nextIndex;
     renderTrailModePanel(trail);
@@ -2525,13 +2342,33 @@ var html5QrCodeInstance = null;
 var isTorchOn = false;
 
 function openQrScanner() {
-  document.getElementById("qrScannerModal").style.display = "flex";
+  var modal = document.getElementById("qrScannerModal");
+  modal.style.display = "flex";
+  modal.offsetHeight; // Force reflow
+  modal.classList.add("active");
+
   if (!html5QrCodeInstance) {
     html5QrCodeInstance = new Html5Qrcode("qr-reader");
   }
   isTorchOn = false;
-  document.getElementById("btn-toggle-torch").textContent = "Senter: OFF";
-  var config = { fps: 10, qrbox: { width: 250, height: 250 } };
+  
+  var labelEl = document.getElementById("torch-label");
+  if (labelEl) labelEl.textContent = "Senter: OFF";
+
+  var config = {
+    fps: 15,
+    qrbox: function(width, height) {
+      var minEdge = Math.min(width, height);
+      var size = Math.floor(minEdge * 0.50);
+      return { width: size, height: size };
+    },
+    aspectRatio: 1.0,
+    formatsToSupport: [Html5QrcodeSupportedFormats.QR_CODE],
+    experimentalFeatures: {
+      useBarCodeDetectorIfSupported: true
+    },
+    disableFlip: false
+  };
   html5QrCodeInstance.start(
     { facingMode: "environment" },
     config,
@@ -2541,8 +2378,19 @@ function openQrScanner() {
     },
     function () {}
   ).catch(function (err) {
-    showToast("Kamera Gagal", "Tidak dapat mengakses kamera: " + err, "error");
-    closeQrScanner();
+    // Fallback: try user-facing camera if environment fails
+    html5QrCodeInstance.start(
+      { facingMode: "user" },
+      config,
+      function (decodedText) {
+        closeQrScanner();
+        verifyQrVisit(decodedText);
+      },
+      function () {}
+    ).catch(function (err2) {
+      showToast("Kamera Gagal", "Tidak dapat mengakses kamera: " + err2, "error");
+      closeQrScanner();
+    });
   });
 }
 
@@ -2552,11 +2400,21 @@ function openQrScannerFromQuiz() {
 }
 
 function closeQrScanner() {
-  document.getElementById("qrScannerModal").style.display = "none";
+  var modal = document.getElementById("qrScannerModal");
+  modal.classList.remove("active");
   if (html5QrCodeInstance && html5QrCodeInstance.isScanning) {
     html5QrCodeInstance.stop().then(function () {
       isTorchOn = false;
-    }).catch(function () {});
+      modal.style.display = "none";
+    }).catch(function () {
+      modal.style.display = "none";
+    });
+  } else {
+    setTimeout(function() {
+      if (!modal.classList.contains("active")) {
+        modal.style.display = "none";
+      }
+    }, 200);
   }
 }
 
@@ -2567,7 +2425,8 @@ function toggleFlashlight() {
       advanced: [{ torch: nextState }]
     }).then(function () {
       isTorchOn = nextState;
-      document.getElementById("btn-toggle-torch").textContent = "Senter: " + (isTorchOn ? "ON" : "OFF");
+      var labelEl = document.getElementById("torch-label");
+      if (labelEl) labelEl.textContent = "Senter: " + (isTorchOn ? "ON" : "OFF");
     }).catch(function () {
       showToast("Senter", "Senter tidak didukung pada perangkat ini.", "info");
     });
@@ -2609,3 +2468,62 @@ function verifyQrVisit(token) {
       }
     });
 }
+
+// ========================================
+// ARRIVAL POPUP CARD (Replaces confirm())
+// ========================================
+
+function showArrivalPopup(options) {
+  // Remove existing popup if any
+  closeArrivalPopup();
+
+  var overlay = document.createElement("div");
+  overlay.id = "arrivalPopupOverlay";
+  overlay.className = "arrival-popup-overlay";
+  overlay.onclick = function (e) {
+    if (e.target === overlay) {
+      closeArrivalPopup();
+      if (options.onCancel) options.onCancel();
+    }
+  };
+
+  var card = document.createElement("div");
+  card.className = "arrival-popup-card";
+  card.innerHTML =
+    '<div class="arrival-popup-icon">📍</div>' +
+    '<h3 class="arrival-popup-title">' + (options.title || "Sampai di Tujuan!") + '</h3>' +
+    (options.siteName ? '<div class="arrival-popup-site">' + options.siteName + '</div>' : '') +
+    '<p class="arrival-popup-message">' + (options.message || "") + '</p>' +
+    '<div class="arrival-popup-actions">' +
+    '<button class="arrival-popup-btn arrival-popup-btn-confirm" id="arrivalBtnConfirm">' + (options.confirmText || "Ya") + '</button>' +
+    '<button class="arrival-popup-btn arrival-popup-btn-cancel" id="arrivalBtnCancel">' + (options.cancelText || "Tidak") + '</button>' +
+    '</div>';
+
+  overlay.appendChild(card);
+  document.body.appendChild(overlay);
+
+  // Force reflow then animate in
+  overlay.offsetHeight;
+  overlay.classList.add("active");
+
+  document.getElementById("arrivalBtnConfirm").onclick = function () {
+    closeArrivalPopup();
+    if (options.onConfirm) options.onConfirm();
+  };
+
+  document.getElementById("arrivalBtnCancel").onclick = function () {
+    closeArrivalPopup();
+    if (options.onCancel) options.onCancel();
+  };
+}
+
+function closeArrivalPopup() {
+  var overlay = document.getElementById("arrivalPopupOverlay");
+  if (overlay) {
+    overlay.classList.remove("active");
+    setTimeout(function () {
+      if (overlay.parentNode) overlay.parentNode.removeChild(overlay);
+    }, 300);
+  }
+}
+

@@ -14,6 +14,13 @@ public class Badge {
     private String trailId;
     private String description;
 
+    // New fields for expanded badge criteria
+    private String conditionType; // "TRAIL", "CATEGORY", "CUSTOM"
+    private String categoryName; // For CATEGORY type: "Cagar Budaya", "Museum", etc.
+    private Integer requiredVisits; // For CUSTOM type: number of sites to visit
+    private Integer timePeriodValue; // For CUSTOM type: time period value
+    private String timePeriodUnit; // For CUSTOM type: "JAM", "HARI", "BULAN"
+
     public Badge() {
     }
 
@@ -22,6 +29,7 @@ public class Badge {
         this.name = name;
         this.trailId = trailId;
         this.description = description;
+        this.conditionType = "TRAIL"; // default for backward compatibility
     }
 
     public String getId() {
@@ -54,5 +62,45 @@ public class Badge {
 
     public void setDescription(String description) {
         this.description = description;
+    }
+
+    public String getConditionType() {
+        return conditionType;
+    }
+
+    public void setConditionType(String conditionType) {
+        this.conditionType = conditionType;
+    }
+
+    public String getCategoryName() {
+        return categoryName;
+    }
+
+    public void setCategoryName(String categoryName) {
+        this.categoryName = categoryName;
+    }
+
+    public Integer getRequiredVisits() {
+        return requiredVisits;
+    }
+
+    public void setRequiredVisits(Integer requiredVisits) {
+        this.requiredVisits = requiredVisits;
+    }
+
+    public Integer getTimePeriodValue() {
+        return timePeriodValue;
+    }
+
+    public void setTimePeriodValue(Integer timePeriodValue) {
+        this.timePeriodValue = timePeriodValue;
+    }
+
+    public String getTimePeriodUnit() {
+        return timePeriodUnit;
+    }
+
+    public void setTimePeriodUnit(String timePeriodUnit) {
+        this.timePeriodUnit = timePeriodUnit;
     }
 }

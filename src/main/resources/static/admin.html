@@ -1101,8 +1101,8 @@
                         <div>
                             <h1>Kelola Badge</h1>
                             <p>
-                                Kelola penghargaan yang diperoleh pengguna saat
-                                menyelesaikan trail
+                                Kelola penghargaan yang diperoleh pengguna
+                                berdasarkan trail, kategori situs, atau kondisi tertentu
                             </p>
                         </div>
                         <button
@@ -1119,7 +1119,7 @@
                                     <tr>
                                         <th>ID</th>
                                         <th>Nama Badge</th>
-                                        <th>Trail Terkait</th>
+                                        <th>Syarat</th>
                                         <th>Deskripsi</th>
                                         <th>Aksi</th>
                                     </tr>
@@ -1496,12 +1496,63 @@
                         </div>
                     </div>
                     <div class="form-group">
+                        <label class="form-label">Jenis Syarat <span style="color: var(--red)">*</span></label>
+                        <select id="f-badgeConditionType" class="form-ctrl" onchange="onBadgeConditionChange()">
+                            <option value="TRAIL">Menyelesaikan Trail</option>
+                            <option value="CATEGORY">Mengunjungi Situs Khusus (per Kategori)</option>
+                            <option value="CUSTOM">Kondisi Tertentu</option>
+                        </select>
+                    </div>
+
+                    <!-- TRAIL condition fields -->
+                    <div id="badge-cond-trail" class="form-group">
                         <label class="form-label">Trail Terkait</label>
                         <select id="f-badgeTrail" class="form-ctrl">
                             <option value="">— Pilih Trail —</option>
                         </select>
+                        <p class="form-hint">Badge diberikan saat user menyelesaikan semua situs pada trail ini.</p>
                     </div>
-                    <div class="form-group">
+
+                    <!-- CATEGORY condition fields -->
+                    <div id="badge-cond-category" class="form-group" style="display:none">
+                        <label class="form-label">Kategori Situs</label>
+                        <select id="f-badgeCategory" class="form-ctrl">
+                            <option value="">— Pilih Kategori —</option>
+                            <option value="Cagar Budaya">Cagar Budaya</option>
+                            <option value="Museum">Museum</option>
+                            <option value="Bangunan Bersejarah">Bangunan Bersejarah</option>
+                            <option value="Infrastruktur Bersejarah">Infrastruktur Bersejarah</option>
+                            <option value="Tempat Ibadah Bersejarah">Tempat Ibadah Bersejarah</option>
+                            <option value="Taman Bersejarah">Taman Bersejarah</option>
+                        </select>
+                        <p class="form-hint">Badge diberikan saat user mengunjungi semua situs dalam kategori ini.</p>
+                    </div>
+
+                    <!-- CUSTOM condition fields -->
+                    <div id="badge-cond-custom" style="display:none">
+                        <div class="section-divider">Kondisi Kunjungan</div>
+                        <div class="form-row three">
+                            <div class="form-group">
+                                <label class="form-label">Jumlah Situs</label>
+                                <input type="number" id="f-badgeRequiredVisits" class="form-ctrl" placeholder="cth: 5" min="1" />
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Dalam Waktu</label>
+                                <input type="number" id="f-badgeTimePeriodValue" class="form-ctrl" placeholder="cth: 1" min="1" />
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Satuan Waktu</label>
+                                <select id="f-badgeTimePeriodUnit" class="form-ctrl">
+                                    <option value="JAM">Jam</option>
+                                    <option value="HARI">Hari</option>
+                                    <option value="BULAN">Bulan</option>
+                                </select>
+                            </div>
+                        </div>
+                        <p class="form-hint">Badge diberikan saat user mengunjungi minimal sejumlah situs tertentu. Contoh: Mengunjungi 5 situs dalam 1 hari.</p>
+                    </div>
+
+                    <div class="form-group" style="margin-top:16px">
                         <label class="form-label">Deskripsi</label>
                         <input
                             type="text"
@@ -1675,9 +1726,15 @@
                             html += '<td style="color:var(--text-mid)">' + esc(s.era || "-") + "</td>";
                             html += "<td>" + statusPill(s.status) + "</td>";
                             html += '<td style="font-size:12px;color:var(--text-light);font-family:monospace">' + coordText + "</td>";
+                            var isProtected = ["S01", "S02", "S09"].indexOf(s.id) >= 0;
                             html += '<td><div class="actions">';
-                            html += '<button class="btn btn-yellow btn-xs" onclick=\'openSiteModal(' + jsonData + ')\'>Edit</button>';
-                            html += '<button class="btn btn-danger btn-xs" onclick="delSite(\'' + esc(s.id) + '\')">Hapus</button>';
+                            if (isProtected) {
+                                html += '<button class="btn btn-yellow btn-xs" onclick=\'openSiteModal(' + jsonData + ')\'>Edit</button>';
+                                html += '<span style="color:var(--text-light);font-size:11px;font-style:italic;margin-left:8px;">Bawaan (Tidak bisa dihapus)</span>';
+                            } else {
+                                html += '<button class="btn btn-yellow btn-xs" onclick=\'openSiteModal(' + jsonData + ')\'>Edit</button>';
+                                html += '<button class="btn btn-danger btn-xs" onclick="delSite(\'' + esc(s.id) + '\')">Hapus</button>';
+                            }
                             html += "</div></td>";
                             html += "</tr>";
                         }
@@ -1880,6 +1937,10 @@
             }
 
             function delSite(id) {
+                if (["S01", "S02", "S09"].indexOf(id) >= 0) {
+                    toast("Ditolak", "Situs bawaan sistem tidak dapat dihapus.", "error");
+                    return;
+                }
                 if (!confirm('Hapus situs "' + id + '"? Tindakan ini tidak dapat dibatalkan.')) return;
                 fetch("/api/admin/sites/" + id, { method: "DELETE", credentials: "include" })
                     .then(function (r) {
@@ -2109,16 +2170,31 @@
                     var html = "";
                     for (var i = 0; i < badges.length; i++) {
                         var b = badges[i];
-                        var trail = null;
-                        for (var j = 0; j < allTrails.length; j++) {
-                            if (allTrails[j].id === b.trailId) { trail = allTrails[j]; break; }
+                        var condType = b.conditionType || "TRAIL";
+                        var condHtml = "";
+                        if (condType === "TRAIL") {
+                            var trail = null;
+                            for (var j = 0; j < allTrails.length; j++) {
+                                if (allTrails[j].id === b.trailId) { trail = allTrails[j]; break; }
+                            }
+                            condHtml = '<span class="pill pill-teal">Trail</span> ';
+                            condHtml += trail ? esc(trail.name) : '<span style="color:var(--text-light)">-</span>';
+                        } else if (condType === "CATEGORY") {
+                            condHtml = '<span class="pill pill-yellow">Kategori</span> ';
+                            condHtml += b.categoryName ? esc(b.categoryName) : '-';
+                        } else if (condType === "CUSTOM") {
+                            condHtml = '<span class="pill pill-green">Kondisi</span> ';
+                            var rv = b.requiredVisits || '?';
+                            var tv = b.timePeriodValue || '?';
+                            var unitMap = { 'JAM': 'jam', 'HARI': 'hari', 'BULAN': 'bulan' };
+                            var tu = unitMap[b.timePeriodUnit] || '?';
+                            condHtml += esc(rv + ' situs / ' + tv + ' ' + tu);
                         }
-                        var trailHtml = trail ? '<span class="pill pill-teal">' + esc(trail.name) + '</span>' : '<span style="color:var(--text-light)">-</span>';
                         var jsonData = JSON.stringify(JSON.stringify(b));
                         html += "<tr>";
                         html += "<td><code>" + esc(b.id) + "</code></td>";
                         html += "<td><strong>" + esc(b.name) + "</strong></td>";
-                        html += "<td>" + trailHtml + "</td>";
+                        html += '<td style="font-size:12.5px">' + condHtml + "</td>";
                         html += '<td style="color:var(--text-mid);max-width:240px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + esc(b.description || "-") + "</td>";
                         html += '<td><div class="actions">';
                         html += '<button class="btn btn-yellow btn-xs" onclick=\'openBadgeModal(' + jsonData + ')\'>Edit</button>';
@@ -2133,6 +2209,13 @@
                 });
             }
 
+            function onBadgeConditionChange() {
+                var condType = document.getElementById("f-badgeConditionType").value;
+                document.getElementById("badge-cond-trail").style.display = condType === "TRAIL" ? "block" : "none";
+                document.getElementById("badge-cond-category").style.display = condType === "CATEGORY" ? "block" : "none";
+                document.getElementById("badge-cond-custom").style.display = condType === "CUSTOM" ? "block" : "none";
+            }
+
             function openBadgeModal(jsonStr) {
                 var b = jsonStr ? JSON.parse(jsonStr) : null;
                 editingBadgeId = b ? b.id : null;
@@ -2141,6 +2224,23 @@
                 document.getElementById("f-badgeId").disabled = !!b;
                 document.getElementById("f-badgeName").value = b ? b.name : "";
                 document.getElementById("f-badgeDesc").value = b ? (b.description || "") : "";
+
+                // Set condition type
+                var condType = (b && b.conditionType) ? b.conditionType : "TRAIL";
+                document.getElementById("f-badgeConditionType").value = condType;
+
+                // Set category
+                document.getElementById("f-badgeCategory").value = (b && b.categoryName) ? b.categoryName : "";
+
+                // Set custom fields
+                document.getElementById("f-badgeRequiredVisits").value = (b && b.requiredVisits) ? b.requiredVisits : "";
+                document.getElementById("f-badgeTimePeriodValue").value = (b && b.timePeriodValue) ? b.timePeriodValue : "";
+                document.getElementById("f-badgeTimePeriodUnit").value = (b && b.timePeriodUnit) ? b.timePeriodUnit : "JAM";
+
+                // Show/hide condition sections
+                onBadgeConditionChange();
+
+                // Load trails for trail dropdown
                 var ready = allTrails.length > 0
                     ? Promise.resolve(allTrails)
                     : adminFetch("/api/admin/trails").then(function (d) { allTrails = Array.isArray(d) ? d : []; return allTrails; });
@@ -2169,11 +2269,17 @@
                     toast("Validasi", "ID dan Nama Badge wajib diisi.", "error");
                     return;
                 }
+                var condType = document.getElementById("f-badgeConditionType").value;
                 var isEdit = editingBadgeId !== null;
                 var payload = {
                     id: id,
                     name: name,
-                    trailId: document.getElementById("f-badgeTrail").value,
+                    conditionType: condType,
+                    trailId: condType === "TRAIL" ? document.getElementById("f-badgeTrail").value : "",
+                    categoryName: condType === "CATEGORY" ? document.getElementById("f-badgeCategory").value : "",
+                    requiredVisits: condType === "CUSTOM" ? (parseInt(document.getElementById("f-badgeRequiredVisits").value) || null) : null,
+                    timePeriodValue: condType === "CUSTOM" ? (parseInt(document.getElementById("f-badgeTimePeriodValue").value) || null) : null,
+                    timePeriodUnit: condType === "CUSTOM" ? document.getElementById("f-badgeTimePeriodUnit").value : "",
                     description: document.getElementById("f-badgeDesc").value.trim()
                 };
                 var url = isEdit ? "/api/admin/badges/" + editingBadgeId : "/api/admin/badges";
