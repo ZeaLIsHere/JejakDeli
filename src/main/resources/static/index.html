@@ -12,7 +12,7 @@
             rel="stylesheet"
             href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
         />
-        <link rel="stylesheet" href="/css/style.css?v=1.4" />
+        <link rel="stylesheet" href="/css/style.css?v=2.0" />
     </head>
     <body>
         <!-- MAIN NAVBAR (Hidden by default, shown after login) -->
@@ -403,7 +403,6 @@
                                 <span class="hud-target-dist" id="hudDistance">—</span>
                                 <div style="display: flex; gap: 8px; margin-top: 8px; justify-content: center; flex-wrap: wrap;">
                                     <button class="btn-geo-sim" id="btnSimulateWalk" onclick="toggleWalkSimulation()" style="display: none; padding: 6px 12px; font-size: 11px; width: auto; background-color: var(--teal); color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600;">Mulai Simulasi Explore</button>
-                                    <button class="btn-visit" onclick="openQrScanner()" style="padding: 6px 12px; font-size: 11px; width: auto; background-color: var(--yellow); color: var(--text-dark); border: none; border-radius: 6px; cursor: pointer; font-weight: 600;">Pindai QR Code</button>
                                 </div>
                             </div>
                         </div>
@@ -652,11 +651,6 @@
                         </button>
                     </div>
                 </div>
-                <div style="margin-top: 15px; border-top: 1px dashed var(--border); padding-top: 15px;">
-                    <button class="btn-visit" onclick="openQrScannerFromQuiz()" style="width: 100%; background-color: var(--yellow); color: var(--text-dark); font-weight: 600; padding: 10px; border-radius: 6px; border: none; cursor: pointer;">
-                        Pindai QR Code Situs
-                    </button>
-                </div>
                 <button
                     class="btn-close-modal"
                     onclick="closeQuizModal()"
@@ -762,21 +756,14 @@
                                 style="font-size: 12px; color: var(--text-mid)"
                                 >Rating:
                             </label>
-                            <select
-                                id="newReviewRating"
-                                style="
-                                    padding: 4px 8px;
-                                    border-radius: 4px;
-                                    border: 1px solid var(--border);
-                                    font-size: 12px;
-                                "
-                            >
-                                <option value="5">⭐⭐⭐⭐⭐ (5/5)</option>
-                                <option value="4">⭐⭐⭐⭐ (4/5)</option>
-                                <option value="3">⭐⭐⭐ (3/5)</option>
-                                <option value="2">⭐⭐ (2/5)</option>
-                                <option value="1">⭐ (1/5)</option>
-                            </select>
+                            <div class="star-rating" id="starRatingContainer" style="display: flex; gap: 4px; cursor: pointer; align-items: center;">
+                                <span class="star active" data-value="1" onclick="setStarRating(1)" style="color: #ffc107; font-size: 24px; transition: color 0.15s, transform 0.1s;">★</span>
+                                <span class="star active" data-value="2" onclick="setStarRating(2)" style="color: #ffc107; font-size: 24px; transition: color 0.15s, transform 0.1s;">★</span>
+                                <span class="star active" data-value="3" onclick="setStarRating(3)" style="color: #ffc107; font-size: 24px; transition: color 0.15s, transform 0.1s;">★</span>
+                                <span class="star active" data-value="4" onclick="setStarRating(4)" style="color: #ffc107; font-size: 24px; transition: color 0.15s, transform 0.1s;">★</span>
+                                <span class="star active" data-value="5" onclick="setStarRating(5)" style="color: #ffc107; font-size: 24px; transition: color 0.15s, transform 0.1s;">★</span>
+                            </div>
+                            <input type="hidden" id="newReviewRating" value="5">
                         </div>
                         <div style="margin-bottom: 10px">
                             <textarea
@@ -831,37 +818,8 @@
             </div>
         </div>
 
-        <div class="modal-overlay" id="qrScannerModal" onclick="closeQrScanner()" style="display: none; align-items: center; justify-content: center; z-index: 9999;">
-            <div class="modal qr-scanner-modal" onclick="event.stopPropagation()">
-                <h3 class="qr-scanner-title">Pindai QR Code Situs</h3>
-                <p class="modal-subtitle qr-scanner-subtitle">
-                    Arahkan kamera perangkat Anda ke QR Code situs untuk check-in instan.
-                </p>
-                <div class="qr-scanner-wrapper">
-                    <div id="qr-reader"></div>
-                    <div class="qr-scanner-overlay">
-                        <div class="scan-region-highlight">
-                            <div class="scanner-corner top-left"></div>
-                            <div class="scanner-corner top-right"></div>
-                            <div class="scanner-corner bottom-left"></div>
-                            <div class="scanner-corner bottom-right"></div>
-                            <div class="scanner-laser"></div>
-                        </div>
-                    </div>
-                </div>
-                <div class="qr-scanner-actions">
-                    <button class="btn-visit btn-toggle-torch" id="btn-toggle-torch" onclick="toggleFlashlight()">
-                        <span class="torch-icon">🔦</span> <span id="torch-label">Senter</span>
-                    </button>
-                    <button class="btn-close-modal btn-cancel-scanner" onclick="closeQrScanner()">
-                        Batal
-                    </button>
-                </div>
-            </div>
-        </div>
 
         <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-        <script src="https://unpkg.com/html5-qrcode"></script>
-        <script src="/js/app.js?v=1.5"></script>
+        <script src="/js/app.js?v=2.0"></script>
     </body>
 </html>

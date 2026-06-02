@@ -704,6 +704,7 @@ function openSiteDetailModal(siteId) {
   }
 
   loadSiteReviews(siteId);
+  setStarRating(5);
 
   document.getElementById("siteDetailModalOverlay").classList.add("active");
 }
@@ -800,6 +801,7 @@ function submitReview() {
         "success",
       );
       document.getElementById("newReviewComment").value = "";
+      setStarRating(5);
       loadSiteReviews(currentDetailSiteId);
     })
     .catch(function (err) {
@@ -807,6 +809,21 @@ function submitReview() {
         showToast("Eror", "Gagal mengirimkan ulasan.", "error");
       }
     });
+}
+
+function setStarRating(ratingVal) {
+  var input = document.getElementById("newReviewRating");
+  if (input) input.value = ratingVal;
+  var stars = document.querySelectorAll("#starRatingContainer .star");
+  stars.forEach(function (star, index) {
+    if (index < ratingVal) {
+      star.style.color = "#ffc107";
+      star.classList.add("active");
+    } else {
+      star.style.color = "#ccc";
+      star.classList.remove("active");
+    }
+  });
 }
 
 function followTrail(trailId) {
@@ -920,15 +937,37 @@ function initMap(sites) {
     var marker = L.marker([s.latitude, s.longitude], {
       icon: yellowIcon,
     }).addTo(map);
-    marker.bindPopup(
-      "<strong>" +
-        s.name +
-        "</strong><br>" +
-        s.era +
-        "<br><em>" +
-        s.status +
-        "</em>",
-    );
+
+    var popupContent =
+      '<div class="explore-popup">' +
+      (s.imageUrl
+        ? '<img src="' +
+          s.imageUrl +
+          '" class="explore-popup-img" alt="' +
+          s.name +
+          '" style="width: 100%; max-height: 100px; object-fit: cover; border-radius: 6px; margin-bottom: 8px;">'
+        : "") +
+      '<div class="explore-popup-title" style="font-weight: 700; font-size: 13.5px; margin-bottom: 2px;">' +
+      s.name +
+      "</div>" +
+      '<div class="explore-popup-era" style="font-size: 11px; color: var(--text-light); margin-bottom: 8px;">' +
+      s.era +
+      "</div>" +
+      '<div style="display: flex; flex-direction: column; gap: 6px;">' +
+      '<button class="explore-popup-btn" onclick="startJourneyFromBeranda(\'' + s.id + '\')" style="width: 100%; padding: 6px; font-size: 11.5px; font-weight: 600; background-color: var(--teal); color: #fff; border: none; border-radius: 4px; cursor: pointer;">Mulai Perjalanan</button>' +
+      '</div>' +
+      "</div>";
+
+    marker.bindPopup(popupContent, {
+      closeButton: false,
+      offset: [0, -35],
+      className: "explore-leaflet-popup",
+    });
+
+    marker.on("mouseover", function (e) {
+      this.openPopup();
+    });
+
     markers[s.id] = marker;
   }
   setTimeout(function () {
@@ -937,6 +976,14 @@ function initMap(sites) {
     }
   }, 100);
 }
+
+function startJourneyFromBeranda(siteId) {
+  showPage("jelajah");
+  setTimeout(function () {
+    startCustomRoute(siteId);
+  }, 300);
+}
+
 
 function updateMapMarkers(visitedSites) {
   if (!map) return;
@@ -1256,11 +1303,7 @@ function checkGeofencingBackend(lat, lon) {
           showToast(
             "Lokasi Terdeteksi",
             'Kunjungan ke "' + s.siteName + '" otomatis tercatat (jarak: ' + s.distance + " m)",
-            "success",
-            {
-              text: "Pindai QR Code",
-              callback: openQrScanner
-            }
+            "success"
           );
           logActivity("visit", "Mengunjungi situs " + s.siteName + ".");
           if (customRouteTargetId === s.siteId) {
@@ -1581,7 +1624,6 @@ function renderJelajahSiteMarkers() {
       '<button class="explore-popup-btn" onclick="startCustomRoute(\'' +
       s.id +
       "')\">Mulai Perjalanan</button>" +
-      '<button class="explore-popup-btn btn-scan-qr" onclick="openQrScanner()" style="background-color: var(--yellow); color: var(--text-dark);">Pindai QR Code</button>' +
       '</div>' +
       "</div>";
 
@@ -2338,136 +2380,6 @@ function renderActivityLog() {
   }
 }
 
-var html5QrCodeInstance = null;
-var isTorchOn = false;
-
-function openQrScanner() {
-  var modal = document.getElementById("qrScannerModal");
-  modal.style.display = "flex";
-  modal.offsetHeight; // Force reflow
-  modal.classList.add("active");
-
-  if (!html5QrCodeInstance) {
-    html5QrCodeInstance = new Html5Qrcode("qr-reader");
-  }
-  isTorchOn = false;
-  
-  var labelEl = document.getElementById("torch-label");
-  if (labelEl) labelEl.textContent = "Senter: OFF";
-
-  var config = {
-    fps: 15,
-    qrbox: function(width, height) {
-      var minEdge = Math.min(width, height);
-      var size = Math.floor(minEdge * 0.50);
-      return { width: size, height: size };
-    },
-    aspectRatio: 1.0,
-    formatsToSupport: [Html5QrcodeSupportedFormats.QR_CODE],
-    experimentalFeatures: {
-      useBarCodeDetectorIfSupported: true
-    },
-    disableFlip: false
-  };
-  html5QrCodeInstance.start(
-    { facingMode: "environment" },
-    config,
-    function (decodedText) {
-      closeQrScanner();
-      verifyQrVisit(decodedText);
-    },
-    function () {}
-  ).catch(function (err) {
-    // Fallback: try user-facing camera if environment fails
-    html5QrCodeInstance.start(
-      { facingMode: "user" },
-      config,
-      function (decodedText) {
-        closeQrScanner();
-        verifyQrVisit(decodedText);
-      },
-      function () {}
-    ).catch(function (err2) {
-      showToast("Kamera Gagal", "Tidak dapat mengakses kamera: " + err2, "error");
-      closeQrScanner();
-    });
-  });
-}
-
-function openQrScannerFromQuiz() {
-  closeQuizModal();
-  openQrScanner();
-}
-
-function closeQrScanner() {
-  var modal = document.getElementById("qrScannerModal");
-  modal.classList.remove("active");
-  if (html5QrCodeInstance && html5QrCodeInstance.isScanning) {
-    html5QrCodeInstance.stop().then(function () {
-      isTorchOn = false;
-      modal.style.display = "none";
-    }).catch(function () {
-      modal.style.display = "none";
-    });
-  } else {
-    setTimeout(function() {
-      if (!modal.classList.contains("active")) {
-        modal.style.display = "none";
-      }
-    }, 200);
-  }
-}
-
-function toggleFlashlight() {
-  if (html5QrCodeInstance && html5QrCodeInstance.isScanning) {
-    var nextState = !isTorchOn;
-    html5QrCodeInstance.applyVideoConstraints({
-      advanced: [{ torch: nextState }]
-    }).then(function () {
-      isTorchOn = nextState;
-      var labelEl = document.getElementById("torch-label");
-      if (labelEl) labelEl.textContent = "Senter: " + (isTorchOn ? "ON" : "OFF");
-    }).catch(function () {
-      showToast("Senter", "Senter tidak didukung pada perangkat ini.", "info");
-    });
-  }
-}
-
-function verifyQrVisit(token) {
-  fetch("/api/visit/qr?token=" + encodeURIComponent(token), {
-    method: "POST"
-  })
-    .then(function (r) {
-      if (r.status === 401) {
-        showAuth();
-        return Promise.reject("Unauthorized");
-      }
-      return r.json().then(function (data) { return { status: r.status, body: data }; });
-    })
-    .then(function (res) {
-      if (res.status === 200) {
-        var d = res.body;
-        showToast("Kunjungan Berhasil", d.message, "success");
-        logActivity("visit", "Mengunjungi situs " + d.site.name + " via QR Code.");
-        if (d.leveledUp) {
-          showToast("Naik Level!", "Selamat! Level Anda naik menjadi Level " + d.newLevel, "info");
-          logActivity("system", "Naik level ke Level " + d.newLevel + "!");
-        }
-        handleNewBadges(d.newBadges);
-        if (customRouteTargetId === d.site.id) {
-          customRouteTargetId = null;
-        }
-        loadExplorerState();
-      } else {
-        showToast("Eror Kunjungan", res.body.message || "Gagal memproses QR Code.", "error");
-      }
-    })
-    .catch(function (err) {
-      if (err !== "Unauthorized") {
-        showToast("Eror", "Terjadi kesalahan saat memverifikasi QR Code.", "error");
-      }
-    });
-}
 
 // ========================================
 // ARRIVAL POPUP CARD (Replaces confirm())

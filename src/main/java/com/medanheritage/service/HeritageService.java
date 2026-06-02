@@ -49,18 +49,7 @@ public class HeritageService {
                 SeedData seed = mapper.readValue(inputStream, SeedData.class);
 
                 if (siteRepository.count() == 0 && seed.sites != null) {
-                    for (HeritageSite s : seed.sites) {
-                        s.setQrCodeToken("qr-" + s.getId().toLowerCase());
-                    }
                     siteRepository.saveAll(seed.sites);
-                }
-
-                List<HeritageSite> allSites = siteRepository.findAll();
-                for (HeritageSite s : allSites) {
-                    if (s.getQrCodeToken() == null || s.getQrCodeToken().trim().isEmpty()) {
-                        s.setQrCodeToken("qr-" + s.getId().toLowerCase());
-                        siteRepository.save(s);
-                    }
                 }
 
                 // Upsert Badges by ID (seed yang belum ada)
@@ -202,12 +191,8 @@ public class HeritageService {
 
     public Explorer authenticateUser(String username, String password) {
         if (username == null || password == null) return null;
-        Optional<Explorer> opt;
-        if (username.contains("@")) {
-            opt = explorerRepository.findByEmail(username.trim());
-        } else {
-            opt = explorerRepository.findByUsername(username.trim());
-        }
+        String term = username.trim();
+        Optional<Explorer> opt = explorerRepository.findByUsernameOrEmail(term, term);
         if (opt.isPresent()) {
             Explorer exp = opt.get();
             if (passwordEncoder.matches(password.trim(), exp.getPassword())) {
@@ -267,6 +252,7 @@ public class HeritageService {
         }
 
         explorer.visit(site);
+        explorer.recordVisit(site, java.time.LocalDateTime.now());
         boolean leveledUp = explorer.addXp(100);
         explorerRepository.save(explorer);
 
@@ -287,60 +273,7 @@ public class HeritageService {
         return result;
     }
 
-    public Map<String, Object> visitSiteViaQr(
-        String qrToken,
-        Long explorerId
-    ) {
-        Map<String, Object> result = new LinkedHashMap<>();
-        if (qrToken == null || qrToken.trim().isEmpty()) {
-            result.put("success", false);
-            result.put("message", "Token QR Code tidak valid.");
-            return result;
-        }
 
-        HeritageSite site = siteRepository.findByQrCodeToken(qrToken.trim()).orElse(null);
-        if (site == null) {
-            result.put("success", false);
-            result.put("message", "Situs dengan QR Code tersebut tidak ditemukan.");
-            return result;
-        }
-
-        Explorer explorer = getExplorerById(explorerId);
-        if (explorer == null) {
-            result.put("success", false);
-            result.put("message", "Pengguna tidak aktif. Silakan login.");
-            return result;
-        }
-
-        if (explorer.hasVisited(site.getId())) {
-            result.put("success", false);
-            result.put(
-                "message",
-                "Anda sudah pernah mengunjungi " + site.getName() + "."
-            );
-            return result;
-        }
-
-        explorer.visit(site);
-        boolean leveledUp = explorer.addXp(100);
-        explorerRepository.save(explorer);
-
-        List<Badge> newBadges = checkAndAwardBadges(explorer);
-        explorerRepository.save(explorer);
-
-        result.put("success", true);
-        result.put(
-            "message",
-            "QR Code Terverifikasi! Berhasil mengunjungi " + site.getName() + "."
-        );
-        result.put("site", site);
-        result.put("newBadges", newBadges);
-        result.put("leveledUp", leveledUp);
-        result.put("xpGained", 100);
-        result.put("newLevel", explorer.getLevel());
-        result.put("newXp", explorer.getXp());
-        return result;
-    }
 
     public Map<String, Object> followTrail(String trailId, Long explorerId) {
         Map<String, Object> result = new LinkedHashMap<>();
@@ -378,6 +311,7 @@ public class HeritageService {
                 skipped++;
             } else {
                 explorer.visit(site);
+                explorer.recordVisit(site, java.time.LocalDateTime.now());
                 explorer.addXp(100);
                 xpGained += 100;
                 entry.put("action", "VISITED");
@@ -475,9 +409,46 @@ public class HeritageService {
                 // Check if explorer has visited >= requiredVisits sites
                 Integer requiredVisits = badge.getRequiredVisits();
                 if (requiredVisits != null && requiredVisits > 0) {
-                    int visitedCount = explorer.getVisitedSites() != null
-                        ? explorer.getVisitedSites().size() : 0;
-                    earned = visitedCount >= requiredVisits;
+                    Integer timeVal = badge.getTimePeriodValue();
+                    String timeUnit = badge.getTimePeriodUnit();
+                    
+                    if (timeVal != null && timeVal > 0 && timeUnit != null && !timeUnit.isEmpty()) {
+                        List<SiteVisit> visits = new ArrayList<>(explorer.getSiteVisits());
+                        visits.sort(Comparator.comparing(SiteVisit::getVisitTime));
+                        
+                        boolean windowMatched = false;
+                        for (int i = 0; i < visits.size(); i++) {
+                            java.time.LocalDateTime start = visits.get(i).getVisitTime();
+                            java.time.LocalDateTime end = start;
+                            if ("JAM".equalsIgnoreCase(timeUnit)) {
+                                end = start.plusHours(timeVal);
+                            } else if ("HARI".equalsIgnoreCase(timeUnit)) {
+                                end = start.plusDays(timeVal);
+                            } else if ("BULAN".equalsIgnoreCase(timeUnit)) {
+                                end = start.plusMonths(timeVal);
+                            }
+                            
+                            Set<String> visitedInWindow = new java.util.HashSet<>();
+                            for (int j = i; j < visits.size(); j++) {
+                                SiteVisit v = visits.get(j);
+                                if (!v.getVisitTime().isAfter(end)) {
+                                    visitedInWindow.add(v.getSite().getId());
+                                } else {
+                                    break;
+                                }
+                            }
+                            
+                            if (visitedInWindow.size() >= requiredVisits) {
+                                windowMatched = true;
+                                break;
+                            }
+                        }
+                        earned = windowMatched;
+                    } else {
+                        int visitedCount = explorer.getVisitedSites() != null
+                            ? explorer.getVisitedSites().size() : 0;
+                        earned = visitedCount >= requiredVisits;
+                    }
                 }
             }
 
@@ -565,12 +536,12 @@ public class HeritageService {
 
             allSitesWithDistance.add(entry);
 
-            // Geofencing: auto-kunjungi jika dalam radius dan belum dikunjungi
             if (
                 distance <= GEOFENCE_RADIUS_METERS &&
                 !explorer.hasVisited(site.getId())
             ) {
                 explorer.visit(site);
+                explorer.recordVisit(site, java.time.LocalDateTime.now());
                 if (explorer.addXp(100)) {
                     leveledUp = true;
                 }
@@ -656,7 +627,6 @@ public class HeritageService {
         existing.setEra(updated.getEra());
         existing.setStatus(updated.getStatus());
         existing.setImageUrl(updated.getImageUrl());
-        existing.setQrCodeToken(updated.getQrCodeToken());
         if (updated.getQuiz() != null) {
             existing.setQuiz(updated.getQuiz());
         }

@@ -87,33 +87,6 @@ public class ApiController {
         return ResponseEntity.badRequest().body(result);
     }
 
-    @PostMapping("/visit/qr")
-    public ResponseEntity<Map<String, Object>> visitSiteViaQr(
-        @RequestParam String token,
-        HttpSession session
-    ) {
-        Long explorerId = (Long) session.getAttribute("currentExplorerId");
-        if (explorerId == null) {
-            return ResponseEntity.status(401).body(
-                Map.of(
-                    "success",
-                    false,
-                    "message",
-                    "Silakan login terlebih dahulu."
-                )
-            );
-        }
-        Map<String, Object> result = heritageService.visitSiteViaQr(
-            token,
-            explorerId
-        );
-        boolean success = (boolean) result.get("success");
-        if (success) {
-            return ResponseEntity.ok(result);
-        }
-        return ResponseEntity.badRequest().body(result);
-    }
-
     @PostMapping("/trail/{trailId}")
     public ResponseEntity<Map<String, Object>> followTrail(
         @PathVariable String trailId,

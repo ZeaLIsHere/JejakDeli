@@ -79,11 +79,30 @@ body {
     text-decoration: none;
     border-radius: 6px;
     transition: all 0.2s;
+    position: relative;
+}
+
+.nav-link::after {
+    content: '';
+    position: absolute;
+    bottom: 4px;
+    left: 18px;
+    right: 18px;
+    height: 2px;
+    background-color: var(--yellow-hover);
+    transform: scaleX(0);
+    transform-origin: left;
+    transition: transform 0.3s ease;
 }
 
 .nav-link:hover {
     color: var(--text-dark);
     background-color: var(--light-gray);
+}
+
+.nav-link:hover::after,
+.nav-link.active::after {
+    transform: scaleX(1);
 }
 
 .nav-link.active {
