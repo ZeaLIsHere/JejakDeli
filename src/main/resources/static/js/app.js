@@ -811,17 +811,74 @@ function submitReview() {
     });
 }
 
+var currentSelectedRating = 5.0;
+
+function handleStarHover(e) {
+  var target = e.target;
+  if (!target.classList.contains('star')) return;
+  
+  var rect = target.getBoundingClientRect();
+  var x = e.clientX - rect.left;
+  var isHalf = x < (rect.width / 2);
+  
+  var index = parseInt(target.getAttribute('data-index'));
+  var hoverValue = isHalf ? (index - 0.5) : index;
+  
+  updateStarsVisual(hoverValue, true);
+}
+
+function handleStarClick(e) {
+  var target = e.target;
+  if (!target.classList.contains('star')) return;
+  
+  var rect = target.getBoundingClientRect();
+  var x = e.clientX - rect.left;
+  var isHalf = x < (rect.width / 2);
+  
+  var index = parseInt(target.getAttribute('data-index'));
+  currentSelectedRating = isHalf ? (index - 0.5) : index;
+  
+  setStarRating(currentSelectedRating);
+}
+
+function resetStarRatingVisual() {
+  updateStarsVisual(currentSelectedRating, false);
+}
+
 function setStarRating(ratingVal) {
+  currentSelectedRating = ratingVal;
   var input = document.getElementById("newReviewRating");
-  if (input) input.value = ratingVal;
+  if (input) input.value = ratingVal.toFixed(1);
+  updateStarsVisual(ratingVal, false);
+}
+
+function updateStarsVisual(ratingVal, isHover) {
+  var input = document.getElementById("newReviewRating");
+  if (isHover && input) {
+    input.value = ratingVal.toFixed(1);
+  } else if (!isHover && input) {
+    input.value = currentSelectedRating.toFixed(1);
+  }
+  
   var stars = document.querySelectorAll("#starRatingContainer .star");
-  stars.forEach(function (star, index) {
-    if (index < ratingVal) {
+  stars.forEach(function (star) {
+    var index = parseInt(star.getAttribute('data-index'));
+    
+    // Reset styling to empty star
+    star.style.background = "none";
+    star.style.webkitBackgroundClip = "initial";
+    star.style.webkitTextFillColor = "initial";
+    star.style.color = "#ccc";
+    star.classList.remove("active");
+    
+    if (index <= ratingVal) {
       star.style.color = "#ffc107";
       star.classList.add("active");
-    } else {
-      star.style.color = "#ccc";
-      star.classList.remove("active");
+    } else if (index - 0.5 === ratingVal) {
+      star.style.background = "linear-gradient(90deg, #ffc107 50%, #ccc 50%)";
+      star.style.webkitBackgroundClip = "text";
+      star.style.webkitTextFillColor = "transparent";
+      star.classList.add("active");
     }
   });
 }
@@ -1678,8 +1735,8 @@ function updateJelajahPlayer(lat, lon) {
     }).addTo(jelajahMap);
   }
 
-  // Ikuti player secara smooth
-  jelajahMap.panTo([lat, lon], { animate: true, duration: 0.6 });
+  // Ikuti player secara smooth - dihapus agar tidak auto-recenter
+  // jelajahMap.panTo([lat, lon], { animate: true, duration: 0.6 });
 
   updateJelajahHUD(lat, lon);
   updateJelajahRoute(lat, lon);
@@ -1698,7 +1755,15 @@ function updateJelajahPlayer(lat, lon) {
   }
 
   var el = document.getElementById("hudCoords");
-  if (el) el.textContent = lat.toFixed(5) + "\n" + lon.toFixed(5);
+  if (el) {
+    el.textContent = lat.toFixed(5) + ", " + lon.toFixed(5);
+  }
+}
+
+function recenterJelajahMap() {
+  if (jelajahMap && currentLat && currentLon) {
+    jelajahMap.panTo([currentLat, currentLon], { animate: true, duration: 0.6 });
+  }
 }
 
 /** Update HUD: nama & jarak situs tujuan terdekat yang belum dikunjungi */

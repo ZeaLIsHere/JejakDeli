@@ -141,7 +141,7 @@ public class ApiController {
     @PostMapping("/sites/{siteId}/reviews")
     public ResponseEntity<Review> addSiteReview(
         @PathVariable String siteId,
-        @RequestParam int rating,
+        @RequestParam double rating,
         @RequestParam String comment,
         HttpSession session
     ) {
