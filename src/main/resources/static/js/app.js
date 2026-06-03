@@ -251,6 +251,9 @@ function showPage(name) {
       initJelajahPage();
     }, 150);
   }
+  if (name === "peringkat") {
+    loadLeaderboard();
+  }
 }
 
 function toggleMobileMenu() {
@@ -402,6 +405,7 @@ function renderSites(sites) {
     grid.appendChild(card);
   }
   loadExplorerState();
+  loadAllSiteStats();
 }
 
 function loadTrails() {
@@ -704,6 +708,7 @@ function openSiteDetailModal(siteId) {
   }
 
   loadSiteReviews(siteId);
+  loadSiteStatsForModal(siteId);
   setStarRating(5);
 
   document.getElementById("siteDetailModalOverlay").classList.add("active");
@@ -1998,7 +2003,7 @@ function generateRouteExpPoints(latlngs) {
         id: epId,
         lat: interpLat,
         lon: interpLon,
-        xpValue: 15,
+        xpValue: 7,
         collected: false,
       };
       routeExpPoints.push(ep);
@@ -2035,7 +2040,7 @@ function generateRouteExpPoints(latlngs) {
         id: epId,
         lat: p2[0],
         lon: p2[1],
-        xpValue: 15, // 15 XP per titik bintang
+        xpValue: 7, // 7 XP per titik bintang (nerfed 50%)
         collected: false,
       };
       routeExpPoints.push(ep);
@@ -2049,7 +2054,7 @@ function generateRouteExpPoints(latlngs) {
       });
       var marker = L.marker([ep.lat, ep.lon], { icon: icon }).addTo(jelajahMap);
 
-      marker.bindTooltip("+15 XP", {
+      marker.bindTooltip("+7 XP", {
         permanent: false,
         direction: "top",
         className: "jelajah-tt",
@@ -2502,5 +2507,200 @@ function closeArrivalPopup() {
       if (overlay.parentNode) overlay.parentNode.removeChild(overlay);
     }, 300);
   }
+}
+
+// ===== LEADERBOARD =====
+
+function loadLeaderboard() {
+  fetch("/api/leaderboard")
+    .then(function (r) { return r.json(); })
+    .then(function (data) { renderLeaderboard(data); })
+    .catch(function () {
+      document.getElementById("leaderboardPodium").innerHTML =
+        '<div class="history-empty">Gagal memuat data peringkat.</div>';
+    });
+}
+
+function renderLeaderboard(data) {
+  var podium = document.getElementById("leaderboardPodium");
+  var tbody = document.getElementById("leaderboardBody");
+
+  if (!data || data.length === 0) {
+    podium.innerHTML = '<div class="history-empty">Belum ada explorer yang terdaftar.</div>';
+    tbody.innerHTML = '';
+    return;
+  }
+
+  // Render podium (top 3)
+  var podiumHtml = '';
+  var medals = ['\ud83e\udd47', '\ud83e\udd48', '\ud83e\udd49'];
+  var podiumOrder = [1, 0, 2]; // silver, gold, bronze (gold in center)
+  var podiumSizes = ['podium-silver', 'podium-gold', 'podium-bronze'];
+
+  if (data.length >= 3) {
+    for (var p = 0; p < 3; p++) {
+      var idx = podiumOrder[p];
+      var e = data[idx];
+      var initial = e.username ? e.username.charAt(0).toUpperCase() : '?';
+      podiumHtml += '<div class="podium-item ' + podiumSizes[p] + (e.isCurrentUser ? ' podium-current' : '') + '">' +
+        '<div class="podium-medal">' + medals[idx] + '</div>' +
+        '<div class="podium-avatar">' + initial + '</div>' +
+        '<div class="podium-name">' + e.username + '</div>' +
+        '<div class="podium-xp">Level ' + e.level + ' &middot; ' + e.xp + ' XP</div>' +
+        '<div class="podium-details">' + e.visitedCount + ' situs &middot; ' + e.badgeCount + ' badge</div>' +
+        '</div>';
+    }
+  } else {
+    for (var p = 0; p < data.length; p++) {
+      var e = data[p];
+      var initial = e.username ? e.username.charAt(0).toUpperCase() : '?';
+      podiumHtml += '<div class="podium-item podium-gold' + (e.isCurrentUser ? ' podium-current' : '') + '">' +
+        '<div class="podium-medal">' + medals[p] + '</div>' +
+        '<div class="podium-avatar">' + initial + '</div>' +
+        '<div class="podium-name">' + e.username + '</div>' +
+        '<div class="podium-xp">Level ' + e.level + ' &middot; ' + e.xp + ' XP</div>' +
+        '</div>';
+    }
+  }
+  podium.innerHTML = podiumHtml;
+
+  // Render full table
+  var html = '';
+  for (var i = 0; i < data.length; i++) {
+    var e = data[i];
+    var rankDisplay = i < 3 ? medals[i] : (i + 1);
+    var rowClass = e.isCurrentUser ? 'leaderboard-row-current' : '';
+    html += '<tr class="' + rowClass + '">' +
+      '<td class="rank-cell">' + rankDisplay + '</td>' +
+      '<td class="name-cell">' +
+        '<span class="lb-avatar">' + (e.username ? e.username.charAt(0).toUpperCase() : '?') + '</span>' +
+        '<span>' + e.username + (e.isCurrentUser ? ' <em>(Anda)</em>' : '') + '</span>' +
+      '</td>' +
+      '<td>' + e.level + '</td>' +
+      '<td class="xp-cell">' + e.xp.toLocaleString() + '</td>' +
+      '<td>' + e.visitedCount + '</td>' +
+      '<td>' + e.badgeCount + '</td>' +
+      '</tr>';
+  }
+  tbody.innerHTML = html;
+}
+
+// ===== SITE STATISTICS =====
+
+var allSiteStats = {};
+
+function loadAllSiteStats() {
+  fetch("/api/sites/stats")
+    .then(function (r) { return r.json(); })
+    .then(function (stats) {
+      allSiteStats = stats;
+      injectSiteStatsToCards();
+    })
+    .catch(function () {});
+}
+
+function injectSiteStatsToCards() {
+  var cards = document.querySelectorAll(".site-card");
+  for (var i = 0; i < cards.length; i++) {
+    var card = cards[i];
+    var siteId = card.getAttribute("data-site-id");
+    if (!siteId || !allSiteStats[siteId]) continue;
+
+    var stats = allSiteStats[siteId];
+    // Remove existing stats row if any
+    var existing = card.querySelector(".site-card-stats-row");
+    if (existing) existing.remove();
+
+    var avgRating = stats.averageRating || 0;
+    var totalVisitors = stats.totalVisitors || 0;
+    var totalReviews = stats.totalReviews || 0;
+
+    var starsHtml = renderStarRatingHtml(avgRating);
+    var statsRow = document.createElement("div");
+    statsRow.className = "site-card-stats-row";
+    statsRow.innerHTML =
+      '<div class="site-card-stat">' +
+        '<span class="mini-stars">' + starsHtml + '</span>' +
+        '<span class="mini-rating">' + avgRating.toFixed(1) + '</span>' +
+        '<span class="mini-reviews">(' + totalReviews + ' ulasan)</span>' +
+      '</div>' +
+      '<div class="site-card-stat">' +
+        '<span class="mini-visitors">\ud83d\udc65 ' + totalVisitors + ' pengunjung</span>' +
+      '</div>';
+
+    // Insert before site-card-bottom
+    var bottom = card.querySelector(".site-card-bottom");
+    if (bottom) {
+      bottom.parentNode.insertBefore(statsRow, bottom);
+    } else {
+      card.appendChild(statsRow);
+    }
+  }
+}
+
+function renderStarRatingHtml(rating) {
+  var html = '';
+  for (var i = 1; i <= 5; i++) {
+    if (rating >= i) {
+      html += '<span style="color: #ffc107;">\u2605</span>';
+    } else if (rating >= i - 0.5) {
+      html += '<span style="color: #ffc107;">\u2605</span>';
+    } else {
+      html += '<span style="color: #ddd;">\u2605</span>';
+    }
+  }
+  return html;
+}
+
+function loadSiteStatsForModal(siteId) {
+  document.getElementById("detailAvgStars").innerHTML = '\u2606\u2606\u2606\u2606\u2606';
+  document.getElementById("detailAvgRating").textContent = '0.0';
+  document.getElementById("detailTotalReviews").textContent = '0';
+  document.getElementById("detailTotalVisitors").textContent = '0';
+
+  fetch("/api/sites/" + siteId + "/stats")
+    .then(function (r) { return r.json(); })
+    .then(function (stats) {
+      var avgRating = stats.averageRating || 0;
+      document.getElementById("detailAvgStars").innerHTML = renderStarRatingHtml(avgRating);
+      document.getElementById("detailAvgRating").textContent = avgRating.toFixed(1);
+      document.getElementById("detailTotalReviews").textContent = stats.totalReviews || 0;
+      document.getElementById("detailTotalVisitors").textContent = stats.totalVisitors || 0;
+    })
+    .catch(function () {});
+}
+
+function sortAndRenderSites() {
+  var sortBy = document.getElementById("sortSites") ? document.getElementById("sortSites").value : 'default';
+  if (sortBy === 'default') {
+    renderSites(allSites);
+    return;
+  }
+
+  if (Object.keys(allSiteStats).length === 0) {
+    fetch("/api/sites/stats")
+      .then(function (r) { return r.json(); })
+      .then(function (stats) {
+        allSiteStats = stats;
+        doSortAndRender(sortBy);
+      });
+  } else {
+    doSortAndRender(sortBy);
+  }
+}
+
+function doSortAndRender(sortBy) {
+  var sorted = allSites.slice();
+  sorted.sort(function (a, b) {
+    var sa = allSiteStats[a.id] || { averageRating: 0, totalVisitors: 0 };
+    var sb = allSiteStats[b.id] || { averageRating: 0, totalVisitors: 0 };
+    if (sortBy === 'rating') {
+      return sb.averageRating - sa.averageRating;
+    } else if (sortBy === 'visitors') {
+      return sb.totalVisitors - sa.totalVisitors;
+    }
+    return 0;
+  });
+  renderSites(sorted);
 }
 

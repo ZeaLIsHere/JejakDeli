@@ -12,7 +12,7 @@
             rel="stylesheet"
             href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
         />
-        <link rel="stylesheet" href="/css/style.css?v=2.0" />
+        <link rel="stylesheet" href="/css/style.css?v=2.1" />
     </head>
     <body>
         <!-- MAIN NAVBAR (Hidden by default, shown after login) -->
@@ -65,6 +65,15 @@
                             data-page="riwayat"
                             onclick="showPage('riwayat')"
                             >Riwayat</a
+                        >
+                    </li>
+                    <li>
+                        <a
+                            href="#"
+                            class="nav-link"
+                            data-page="peringkat"
+                            onclick="showPage('peringkat')"
+                            >Peringkat</a
                         >
                     </li>
                     <li id="navAdminLink" style="display: none">
@@ -370,6 +379,11 @@
                             Taman Bersejarah
                         </option>
                     </select>
+                    <select id="sortSites" onchange="sortAndRenderSites()">
+                        <option value="default">Urutkan</option>
+                        <option value="rating">Rating Tertinggi</option>
+                        <option value="visitors">Paling Populer</option>
+                    </select>
                 </div>
 
                 <div class="site-grid" id="siteGrid"></div>
@@ -591,6 +605,35 @@
                 </div>
             </section>
 
+            <!-- PAGE: PERINGKAT -->
+            <section id="page-peringkat" class="page">
+                <div class="page-header">
+                    <h1>🏆 Papan Peringkat</h1>
+                    <p>Ranking explorer JejakDeli berdasarkan XP tertinggi</p>
+                </div>
+
+                <div class="leaderboard-card">
+                    <div class="leaderboard-podium" id="leaderboardPodium">
+                        <div class="history-empty">Memuat data peringkat...</div>
+                    </div>
+                    <div class="leaderboard-table-wrapper">
+                        <table class="leaderboard-table">
+                            <thead>
+                                <tr>
+                                    <th>#</th>
+                                    <th>Explorer</th>
+                                    <th>Level</th>
+                                    <th>XP</th>
+                                    <th>Situs</th>
+                                    <th>Badge</th>
+                                </tr>
+                            </thead>
+                            <tbody id="leaderboardBody"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
             <footer>
                 <p>
                     JejakDeli - Sistem Penjelajahan Situs Bersejarah Kota Medan
@@ -700,6 +743,21 @@
                         "
                         >Era</span
                     >
+                </div>
+                <div class="site-stats-row" id="detailSiteStats">
+                    <div class="site-stat-item">
+                        <span class="site-stat-stars" id="detailAvgStars">☆☆☆☆☆</span>
+                        <span class="site-stat-value" id="detailAvgRating">0.0</span>
+                        <span class="site-stat-label">Rata-rata Rating</span>
+                    </div>
+                    <div class="site-stat-item">
+                        <span class="site-stat-value" id="detailTotalReviews">0</span>
+                        <span class="site-stat-label">Ulasan</span>
+                    </div>
+                    <div class="site-stat-item">
+                        <span class="site-stat-value" id="detailTotalVisitors">0</span>
+                        <span class="site-stat-label">Pengunjung</span>
+                    </div>
                 </div>
                 <img
                     id="detailSiteImg"
@@ -828,6 +886,6 @@
 
 
         <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-        <script src="/js/app.js?v=2.0"></script>
+        <script src="/js/app.js?v=2.1"></script>
     </body>
 </html>

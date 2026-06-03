@@ -210,6 +210,29 @@ public class ApiController {
         return ResponseEntity.badRequest().body(result);
     }
 
+    @GetMapping("/leaderboard")
+    public ResponseEntity<List<Map<String, Object>>> getLeaderboard(
+        HttpSession session
+    ) {
+        Long explorerId = (Long) session.getAttribute("currentExplorerId");
+        List<Map<String, Object>> leaderboard = heritageService.getLeaderboard(explorerId);
+        return ResponseEntity.ok(leaderboard);
+    }
+
+    @GetMapping("/sites/stats")
+    public ResponseEntity<Map<String, Map<String, Object>>> getAllSiteStats() {
+        Map<String, Map<String, Object>> stats = heritageService.getAllSiteStats();
+        return ResponseEntity.ok(stats);
+    }
+
+    @GetMapping("/sites/{siteId}/stats")
+    public ResponseEntity<Map<String, Object>> getSiteStats(
+        @PathVariable String siteId
+    ) {
+        Map<String, Object> stats = heritageService.getSiteStats(siteId);
+        return ResponseEntity.ok(stats);
+    }
+
     @PostMapping("/reset")
     public ResponseEntity<Map<String, Object>> resetExplorer(
         HttpSession session

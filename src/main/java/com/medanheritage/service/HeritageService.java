@@ -611,6 +611,89 @@ public class HeritageService {
         }
     }
 
+    // ===== LEADERBOARD =====
+
+    public List<Map<String, Object>> getLeaderboard(Long currentExplorerId) {
+        List<Explorer> explorers = explorerRepository.findByRoleNotOrderByXpDesc("ADMIN");
+        List<Map<String, Object>> leaderboard = new ArrayList<>();
+        int rank = 1;
+        for (Explorer exp : explorers) {
+            Map<String, Object> entry = new LinkedHashMap<>();
+            entry.put("rank", rank);
+            entry.put("username", exp.getUsername());
+            entry.put("level", exp.getLevel());
+            entry.put("xp", exp.getXp());
+            entry.put("visitedCount", exp.getVisitedSites() != null ? exp.getVisitedSites().size() : 0);
+            entry.put("badgeCount", exp.getEarnedBadges() != null ? exp.getEarnedBadges().size() : 0);
+            entry.put("isCurrentUser", exp.getId().equals(currentExplorerId));
+            leaderboard.add(entry);
+            rank++;
+        }
+        return leaderboard;
+    }
+
+    // ===== SITE STATISTICS =====
+
+    public Map<String, Object> getSiteStats(String siteId) {
+        Map<String, Object> stats = new LinkedHashMap<>();
+        Double avgRating = reviewRepository.findAverageRatingBySiteId(siteId);
+        Long reviewCount = reviewRepository.countBySiteId(siteId);
+        // Count unique visitors from SiteVisit
+        List<Explorer> allExplorers = explorerRepository.findAll();
+        int visitorCount = 0;
+        for (Explorer exp : allExplorers) {
+            if (exp.getVisitedSites() != null) {
+                for (HeritageSite vs : exp.getVisitedSites()) {
+                    if (vs.getId().equals(siteId)) {
+                        visitorCount++;
+                        break;
+                    }
+                }
+            }
+        }
+        stats.put("averageRating", avgRating != null ? Math.round(avgRating * 10.0) / 10.0 : 0.0);
+        stats.put("totalReviews", reviewCount != null ? reviewCount : 0);
+        stats.put("totalVisitors", visitorCount);
+        return stats;
+    }
+
+    public Map<String, Map<String, Object>> getAllSiteStats() {
+        Map<String, Map<String, Object>> allStats = new LinkedHashMap<>();
+        // Pre-compute avg ratings and review counts per site
+        List<Review> allReviews = reviewRepository.findAll();
+        Map<String, List<Double>> ratingsMap = new LinkedHashMap<>();
+        for (Review rev : allReviews) {
+            ratingsMap.computeIfAbsent(rev.getSiteId(), k -> new ArrayList<>()).add(rev.getRating());
+        }
+        // Pre-compute visitor counts per site
+        List<Explorer> allExplorers = explorerRepository.findAll();
+        Map<String, Integer> visitorMap = new LinkedHashMap<>();
+        for (Explorer exp : allExplorers) {
+            if (exp.getVisitedSites() != null) {
+                for (HeritageSite vs : exp.getVisitedSites()) {
+                    visitorMap.merge(vs.getId(), 1, Integer::sum);
+                }
+            }
+        }
+        // Build stats for each site
+        List<HeritageSite> sites = siteRepository.findAll();
+        for (HeritageSite site : sites) {
+            Map<String, Object> stats = new LinkedHashMap<>();
+            List<Double> ratings = ratingsMap.get(site.getId());
+            if (ratings != null && !ratings.isEmpty()) {
+                double avg = ratings.stream().mapToDouble(Double::doubleValue).average().orElse(0);
+                stats.put("averageRating", Math.round(avg * 10.0) / 10.0);
+                stats.put("totalReviews", ratings.size());
+            } else {
+                stats.put("averageRating", 0.0);
+                stats.put("totalReviews", 0);
+            }
+            stats.put("totalVisitors", visitorMap.getOrDefault(site.getId(), 0));
+            allStats.put(site.getId(), stats);
+        }
+        return allStats;
+    }
+
     // ===== ADMIN: SITE CRUD =====
 
     public HeritageSite createSite(HeritageSite site) {
