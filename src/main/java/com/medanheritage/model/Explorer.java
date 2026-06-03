@@ -42,6 +42,10 @@ public class Explorer {
     @com.fasterxml.jackson.annotation.JsonIgnore
     private List<Badge> earnedBadges;
 
+    @OneToMany(mappedBy = "explorer", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.EAGER)
+    @com.fasterxml.jackson.annotation.JsonIgnore
+    private List<SiteVisit> siteVisits = new ArrayList<>();
+
     private int xp;
     private int level = 1;
 
@@ -204,11 +208,29 @@ public class Explorer {
         }
     }
 
+    public List<SiteVisit> getSiteVisits() {
+        return siteVisits;
+    }
+
+    public void setSiteVisits(List<SiteVisit> siteVisits) {
+        this.siteVisits = siteVisits;
+    }
+
+    public void recordVisit(HeritageSite site, java.time.LocalDateTime time) {
+        if (this.siteVisits == null) {
+            this.siteVisits = new ArrayList<>();
+        }
+        this.siteVisits.add(new SiteVisit(this, site, time));
+    }
+
     public void reset() {
         this.currentLocation = null;
         this.visitedSites.clear();
         this.earnedBadges.clear();
         this.xp = 0;
         this.level = 1;
+        if (this.siteVisits != null) {
+            this.siteVisits.clear();
+        }
     }
 }

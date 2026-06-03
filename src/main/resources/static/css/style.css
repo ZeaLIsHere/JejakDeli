@@ -79,11 +79,30 @@ body {
     text-decoration: none;
     border-radius: 6px;
     transition: all 0.2s;
+    position: relative;
+}
+
+.nav-link::after {
+    content: '';
+    position: absolute;
+    bottom: 4px;
+    left: 18px;
+    right: 18px;
+    height: 2px;
+    background-color: var(--yellow-hover);
+    transform: scaleX(0);
+    transform-origin: left;
+    transition: transform 0.3s ease;
 }
 
 .nav-link:hover {
     color: var(--text-dark);
     background-color: var(--light-gray);
+}
+
+.nav-link:hover::after,
+.nav-link.active::after {
+    transform: scaleX(1);
 }
 
 .nav-link.active {
@@ -1116,12 +1135,7 @@ footer p {
         font-size: 10px;
     }
 
-    .btn-ar-toggle {
-        right: 50%;
-        transform: translateX(50%);
-        bottom: 16px;
-        white-space: nowrap;
-    }
+    /* Removed AR Mode responsive styles */
 }
 
 /* ===================================================
@@ -1990,53 +2004,7 @@ footer p {
 }
 
 /* AR Toggle Button */
-.btn-ar-toggle {
-    position: absolute;
-    bottom: 20px;
-    right: 16px;
-    z-index: 2000;
-    background: rgba(8, 8, 18, 0.82);
-    color: #fff;
-    border: 1px solid rgba(255, 255, 255, 0.18);
-    border-radius: 24px;
-    padding: 10px 18px;
-    font-size: 13px;
-    font-weight: 600;
-    cursor: pointer;
-    backdrop-filter: blur(12px);
-    transition: all 0.2s;
-}
-
-.btn-ar-toggle:hover {
-    border-color: var(--yellow);
-    color: var(--yellow);
-}
-.btn-ar-toggle.active {
-    background: var(--yellow);
-    color: #000;
-    border-color: transparent;
-}
-
-/* ---- AR View ---- */
-#arView {
-    position: absolute;
-    inset: 0;
-    z-index: 1500;
-    background: #000;
-}
-
-#arCamera {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-}
-
-#arCanvas {
-    position: absolute;
-    inset: 0;
-    width: 100%;
-    height: 100%;
-}
+/* AR Mode styles removed */
 
 /* ---- Trail Mode Panel ---- */
 .trail-mode-panel {
@@ -2270,60 +2238,7 @@ footer p {
     }
 }
 
-/* ---- Arrival Alert (Pokémon GO encounter style) ---- */
-.jelajah-arrival-alert {
-    position: absolute;
-    bottom: 90px;
-    left: 50%;
-    transform: translateX(-50%);
-    z-index: 3000;
-    background: linear-gradient(135deg, #0a0a18 0%, #18101a 100%);
-    border: 2px solid var(--yellow);
-    border-radius: 20px;
-    padding: 14px 24px;
-    display: flex;
-    align-items: center;
-    gap: 14px;
-    min-width: 270px;
-    box-shadow:
-        0 0 32px rgba(230, 184, 0, 0.35),
-        0 8px 32px rgba(0, 0, 0, 0.55);
-    animation: arrival-pop 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
-}
-
-@keyframes arrival-pop {
-    from {
-        transform: translateX(-50%) scale(0.55);
-        opacity: 0;
-    }
-    to {
-        transform: translateX(-50%) scale(1);
-        opacity: 1;
-    }
-}
-
-.arrival-icon {
-    font-size: 32px;
-    line-height: 1;
-    flex-shrink: 0;
-}
-
-.arrival-info {
-    display: flex;
-    flex-direction: column;
-    gap: 3px;
-}
-
-.arrival-title {
-    font-size: 15px;
-    font-weight: 700;
-    color: var(--yellow);
-}
-
-.arrival-sub {
-    font-size: 12px;
-    color: rgba(255, 255, 255, 0.6);
-}
+/* Arrival Alert styles removed */
 
 /* ---- Player Marker (animated blue pulsing dot) ---- */
 .player-marker-outer {
@@ -2541,22 +2456,243 @@ footer p {
 }
 
 .explore-popup-btn {
-    background-color: var(--yellow);
+    background-color: var(--teal);
     color: var(--white);
     border: none;
-    padding: 6px 12px;
-    border-radius: 4px;
+    padding: 7px 12px;
+    border-radius: 6px;
     font-size: 11px;
     font-weight: 600;
     cursor: pointer;
     text-align: center;
-    transition: background-color 0.2s;
+    transition: all 0.2s ease;
     font-family: inherit;
     margin-top: 4px;
+    width: 100%;
 }
 
 .explore-popup-btn:hover {
+    background-color: #028a94;
+}
+
+.explore-popup-btn.btn-scan-qr {
+    background-color: var(--yellow) !important;
+    color: var(--text-dark) !important;
+}
+
+.explore-popup-btn.btn-scan-qr:hover {
+    background-color: var(--yellow-hover) !important;
+}
+
+/* ---- Toast Action Button ---- */
+.toast-action-btn {
+    margin-top: 8px;
+    padding: 6px 12px;
+    background-color: var(--yellow);
+    color: var(--text-dark);
+    border: none;
+    border-radius: 6px;
+    font-size: 11px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: inline-block;
+    width: fit-content;
+}
+
+.toast-action-btn:hover {
     background-color: var(--yellow-hover);
+    transform: translateY(-1px);
+}
+
+/* ---- Optimized QR Scanner Modal ---- */
+.qr-scanner-modal {
+    max-width: 450px !important;
+    width: 90% !important;
+    background: rgba(20, 20, 35, 0.85) !important;
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.15) !important;
+    border-radius: 16px !important;
+    padding: 24px !important;
+    color: #ffffff !important;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5) !important;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.qr-scanner-title {
+    font-size: 22px !important;
+    font-weight: 700;
+    margin: 0 !important;
+    text-align: center;
+    color: #ffffff;
+}
+
+.qr-scanner-subtitle {
+    font-size: 13px !important;
+    color: rgba(255, 255, 255, 0.7) !important;
+    margin: 0 !important;
+    text-align: center;
+    line-height: 1.4;
+}
+
+.qr-scanner-wrapper {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 1 / 1;
+    border-radius: 12px;
+    overflow: hidden;
+    background: #000;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.8);
+}
+
+#qr-reader {
+    width: 100% !important;
+    height: 100% !important;
+    border: none !important;
+}
+
+#qr-reader img {
+    display: none !important;
+}
+#qr-reader video {
+    object-fit: cover !important;
+    width: 100% !important;
+    height: 100% !important;
+}
+
+.qr-scanner-overlay {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10;
+}
+
+.scan-region-highlight {
+    position: relative;
+    width: 65%;
+    height: 65%;
+    border: 1px dashed rgba(255, 255, 255, 0.3);
+    box-shadow: 0 0 0 4000px rgba(0, 0, 0, 0.45);
+}
+
+/* Neon Corners */
+.scanner-corner {
+    position: absolute;
+    width: 20px;
+    height: 20px;
+    border: 3px solid transparent;
+    pointer-events: none;
+}
+
+.scanner-corner.top-left {
+    top: -2px;
+    left: -2px;
+    border-top-color: var(--yellow);
+    border-left-color: var(--yellow);
+    border-top-left-radius: 6px;
+}
+
+.scanner-corner.top-right {
+    top: -2px;
+    right: -2px;
+    border-top-color: var(--yellow);
+    border-right-color: var(--yellow);
+    border-top-right-radius: 6px;
+}
+
+.scanner-corner.bottom-left {
+    bottom: -2px;
+    left: -2px;
+    border-bottom-color: var(--yellow);
+    border-left-color: var(--yellow);
+    border-bottom-left-radius: 6px;
+}
+
+.scanner-corner.bottom-right {
+    bottom: -2px;
+    right: -2px;
+    border-bottom-color: var(--yellow);
+    border-right-color: var(--yellow);
+    border-bottom-right-radius: 6px;
+}
+
+/* Glowing Laser Line Animation */
+.scanner-laser {
+    position: absolute;
+    left: 0;
+    width: 100%;
+    height: 3px;
+    background: linear-gradient(to right, transparent, var(--yellow), transparent);
+    box-shadow: 0 0 8px var(--yellow);
+    animation: scan-laser-anim 2.5s linear infinite;
+}
+
+@keyframes scan-laser-anim {
+    0% {
+        top: 0%;
+    }
+    50% {
+        top: 100%;
+    }
+    100% {
+        top: 0%;
+    }
+}
+
+/* Actions styling inside scanner */
+.qr-scanner-actions {
+    display: flex;
+    gap: 12px;
+    width: 100%;
+    margin-top: 8px;
+}
+
+.btn-toggle-torch {
+    flex: 1.2;
+    padding: 11px;
+    background-color: var(--teal) !important;
+    border: none;
+    border-radius: 8px;
+    color: #fff;
+    font-weight: 600;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    font-size: 13px;
+    transition: all 0.2s ease;
+}
+
+.btn-toggle-torch:hover {
+    background-color: #028a94 !important;
+    transform: translateY(-1px);
+}
+
+.btn-cancel-scanner {
+    flex: 1;
+    padding: 11px;
+    background-color: rgba(255, 255, 255, 0.08) !important;
+    border: 1px solid rgba(255, 255, 255, 0.15) !important;
+    border-radius: 8px;
+    color: #fff !important;
+    font-weight: 600;
+    cursor: pointer;
+    font-size: 13px;
+    transition: all 0.2s ease;
+}
+
+.btn-cancel-scanner:hover {
+    background-color: rgba(255, 255, 255, 0.15) !important;
+    border-color: rgba(255, 255, 255, 0.3) !important;
+    transform: translateY(-1px);
 }
 
 .explore-leaflet-popup .leaflet-popup-content-wrapper {
@@ -2596,3 +2732,143 @@ footer p {
         transform: translateY(-3px) scale(1.1);
     }
 }
+
+/* ========== ARRIVAL POPUP CARD ========== */
+
+.arrival-popup-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.55);
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10000;
+    padding: 20px;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.arrival-popup-overlay.active {
+    opacity: 1;
+}
+
+.arrival-popup-card {
+    background: var(--white);
+    border-radius: 20px;
+    padding: 32px 28px 24px;
+    max-width: 400px;
+    width: 100%;
+    text-align: center;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.25), 0 0 0 1px rgba(230, 184, 0, 0.15);
+    transform: translateY(30px) scale(0.95);
+    transition: transform 0.35s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    position: relative;
+    overflow: hidden;
+}
+
+.arrival-popup-overlay.active .arrival-popup-card {
+    transform: translateY(0) scale(1);
+}
+
+.arrival-popup-card::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: linear-gradient(90deg, var(--yellow), var(--teal), var(--yellow));
+}
+
+.arrival-popup-icon {
+    width: 64px;
+    height: 64px;
+    margin: 0 auto 16px;
+    background: linear-gradient(135deg, #fff8db 0%, #e0f2f1 100%);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 30px;
+    box-shadow: 0 4px 16px rgba(230, 184, 0, 0.2);
+    animation: arrival-icon-pulse 2s ease-in-out infinite;
+}
+
+@keyframes arrival-icon-pulse {
+    0%, 100% { box-shadow: 0 4px 16px rgba(230, 184, 0, 0.2); }
+    50% { box-shadow: 0 4px 24px rgba(230, 184, 0, 0.45); }
+}
+
+.arrival-popup-title {
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--text-dark);
+    margin-bottom: 4px;
+}
+
+.arrival-popup-site {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--teal);
+    margin-bottom: 12px;
+    padding: 4px 14px;
+    background: #e0f2f1;
+    border-radius: 100px;
+    display: inline-block;
+}
+
+.arrival-popup-message {
+    font-size: 13.5px;
+    color: var(--text-mid);
+    line-height: 1.6;
+    margin-bottom: 24px;
+}
+
+.arrival-popup-message strong {
+    color: var(--text-dark);
+    font-weight: 600;
+}
+
+.arrival-popup-actions {
+    display: flex;
+    gap: 10px;
+}
+
+.arrival-popup-btn {
+    flex: 1;
+    padding: 12px 16px;
+    border: none;
+    border-radius: 12px;
+    font-family: "Inter", sans-serif;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.arrival-popup-btn:active {
+    transform: scale(0.96);
+}
+
+.arrival-popup-btn-confirm {
+    background: linear-gradient(135deg, var(--yellow) 0%, var(--yellow-hover) 100%);
+    color: var(--text-dark);
+    box-shadow: 0 4px 12px rgba(230, 184, 0, 0.3);
+}
+
+.arrival-popup-btn-confirm:hover {
+    box-shadow: 0 6px 20px rgba(230, 184, 0, 0.45);
+    transform: translateY(-1px);
+}
+
+.arrival-popup-btn-cancel {
+    background: var(--light-gray);
+    color: var(--text-mid);
+}
+
+.arrival-popup-btn-cancel:hover {
+    background: #e8e8e8;
+}
+

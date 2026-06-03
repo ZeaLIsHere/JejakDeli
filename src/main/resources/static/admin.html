@@ -17,10 +17,10 @@
                 --yellow: #e6b800;
                 --yellow-hover: #d4a800;
                 --yellow-light: #fff8db;
-                --teal: #00796b;
-                --teal-light: #e0f2f1;
-                --green: #2e7d32;
-                --green-light: #e8f5e9;
+                --teal: #e6b800;
+                --teal-light: #fff8db;
+                --green: #e6b800;
+                --green-light: #fff8db;
                 --red: #c62828;
                 --red-light: #ffebee;
                 --bg: #f4f5f7;
@@ -57,71 +57,77 @@
                 left: 0;
                 right: 0;
                 height: var(--nav-h);
-                background: #1a1a2e;
+                background: var(--yellow);
                 display: flex;
                 align-items: center;
                 justify-content: space-between;
                 padding: 0 20px;
                 z-index: 1000;
-                box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+                box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
             }
             .navbar-brand {
                 display: flex;
                 align-items: center;
-                gap: 10px;
+                gap: 12px;
+                margin-left: 24px;
             }
             .navbar-brand .logo {
-                font-size: 22px;
+                font-size: 24px;
             }
             .navbar-brand .brand-text {
-                font-size: 16px;
+                font-size: 20px;
                 font-weight: 700;
-                color: #fff;
+                color: #1a1a1a;
             }
             .navbar-brand .brand-badge {
-                font-size: 10px;
+                font-size: 12px;
                 font-weight: 700;
                 letter-spacing: 1px;
-                background: var(--yellow);
-                color: #1a1a1a;
-                padding: 2px 8px;
+                background: #1a1a1a;
+                color: var(--yellow);
+                padding: 4px 10px;
                 border-radius: 4px;
                 text-transform: uppercase;
             }
             .navbar-right {
                 display: flex;
                 align-items: center;
-                gap: 10px;
+                gap: 12px;
+                margin-right: 24px;
+            }
+            .navbar-right .btn {
+                padding: 8px 16px;
+                font-size: 13.5px;
             }
             .navbar-user {
                 display: flex;
                 align-items: center;
-                gap: 8px;
-                background: rgba(255, 255, 255, 0.08);
+                gap: 10px;
+                background: rgba(0, 0, 0, 0.05);
                 border-radius: 6px;
-                padding: 5px 12px;
+                padding: 6px 14px;
             }
             .navbar-user .avatar {
-                width: 28px;
-                height: 28px;
+                width: 32px;
+                height: 32px;
                 border-radius: 50%;
-                background: var(--yellow);
-                color: #1a1a1a;
+                background: #1a1a1a;
+                color: var(--yellow);
                 display: flex;
                 align-items: center;
                 justify-content: center;
-                font-size: 12px;
+                font-size: 14px;
                 font-weight: 700;
                 flex-shrink: 0;
             }
             .navbar-user .uname {
-                font-size: 13px;
+                font-size: 15px;
                 font-weight: 600;
-                color: #fff;
+                color: #1a1a1a;
             }
             .navbar-user .urole {
-                font-size: 10px;
-                color: var(--yellow);
+                font-size: 11px;
+                color: #555;
                 font-weight: 600;
                 letter-spacing: 0.5px;
                 text-transform: uppercase;
@@ -159,7 +165,7 @@
                 color: #fff;
             }
             .btn-primary:hover {
-                background: #00695c;
+                background: var(--yellow-hover);
             }
             .btn-yellow {
                 background: var(--yellow);
@@ -184,12 +190,12 @@
                 background: #f5f5f5;
             }
             .btn-dark {
-                background: rgba(255, 255, 255, 0.12);
-                color: #fff;
-                border: 1px solid rgba(255, 255, 255, 0.2);
+                background: rgba(0, 0, 0, 0.08);
+                color: #1a1a1a;
+                border: 1px solid rgba(0, 0, 0, 0.15);
             }
             .btn-dark:hover {
-                background: rgba(255, 255, 255, 0.2);
+                background: rgba(0, 0, 0, 0.15);
             }
 
             /* ── SIDEBAR ── */
@@ -216,27 +222,35 @@
             }
             .sidebar-menu {
                 list-style: none;
-                padding: 0 8px 8px;
+                padding: 12px 8px;
+            }
+            .sidebar-menu li {
+                margin-bottom: 8px;
             }
             .sidebar-menu li a {
                 display: flex;
                 align-items: center;
                 gap: 10px;
-                padding: 9px 12px;
+                padding: 9px 16px;
                 border-radius: 6px;
                 text-decoration: none;
-                color: var(--text-mid);
+                background-color: transparent;
+                color: #00796b;
+                border: 1px solid #00796b;
                 font-size: 13.5px;
-                font-weight: 500;
-                transition: all 0.15s;
+                font-weight: 600;
+                transition: all 0.2s ease-in-out;
             }
             .sidebar-menu li a:hover {
-                background: var(--bg);
-                color: var(--text);
+                background-color: #e0f2f1;
+                color: #00796b;
+                transform: translateY(-1px);
+                box-shadow: 0 2px 6px rgba(0, 121, 107, 0.15);
             }
             .sidebar-menu li a.active {
-                background: var(--yellow-light);
-                color: #7a5c00;
+                background-color: #00796b;
+                color: #ffffff;
+                border-color: #00796b;
                 font-weight: 700;
             }
             .sidebar-menu li a .menu-icon {
@@ -253,17 +267,22 @@
             .sidebar-footer a {
                 display: flex;
                 align-items: center;
+                justify-content: center;
                 gap: 8px;
-                padding: 8px 10px;
+                padding: 9px 12px;
                 border-radius: 6px;
-                color: var(--text-mid);
-                font-size: 13px;
-                font-weight: 500;
                 text-decoration: none;
-                transition: background 0.15s;
+                background-color: transparent;
+                color: var(--text-mid);
+                border: 1px solid var(--border);
+                font-size: 13px;
+                font-weight: 600;
+                transition: all 0.2s ease-in-out;
             }
             .sidebar-footer a:hover {
-                background: var(--bg);
+                background-color: #f5f5f5;
+                color: var(--text);
+                transform: translateY(-1px);
             }
 
             /* ── MAIN CONTENT ── */
@@ -761,14 +780,15 @@
 
             /* ── WELCOME CARD ── */
             .welcome-card {
-                background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+                background: linear-gradient(135deg, var(--yellow) 0%, #ffeb99 100%);
                 border-radius: var(--radius);
                 padding: 28px 32px;
                 margin-bottom: 24px;
-                color: #fff;
+                color: #1a1a1a;
                 display: flex;
                 align-items: center;
                 gap: 24px;
+                box-shadow: var(--shadow-sm);
             }
             .welcome-card .wc-icon {
                 font-size: 48px;
@@ -781,7 +801,7 @@
             }
             .welcome-card p {
                 font-size: 13px;
-                color: rgba(255, 255, 255, 0.65);
+                color: #444;
                 line-height: 1.6;
             }
 
@@ -819,6 +839,7 @@
                 justify-content: center;
                 font-size: 20px;
                 flex-shrink: 0;
+                color: #7a5c00;
             }
             .quick-card h4 {
                 font-size: 13.5px;
@@ -953,28 +974,36 @@
 
                     <div class="stat-grid">
                         <div class="stat-card">
-                            <div class="stat-icon yellow"></div>
+                            <div class="stat-icon yellow">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 22h16"/><path d="M4 18h16"/><path d="M4 14h16"/><path d="M6 18v-4"/><path d="M10 18v-4"/><path d="M14 18v-4"/><path d="M18 18v-4"/><path d="m12 2-8 6h16Z"/></svg>
+                            </div>
                             <div>
                                 <div class="stat-val" id="ds-sites">—</div>
                                 <div class="stat-lbl">Total Situs</div>
                             </div>
                         </div>
                         <div class="stat-card">
-                            <div class="stat-icon teal"></div>
+                            <div class="stat-icon teal">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="3 6 9 3 15 6 21 3 21 18 15 21 9 18 3 21"/><line x1="9" x2="9" y1="3" y2="18"/><line x1="15" x2="15" y1="6" y2="21"/></svg>
+                            </div>
                             <div>
                                 <div class="stat-val" id="ds-trails">—</div>
                                 <div class="stat-lbl">Total Trail</div>
                             </div>
                         </div>
                         <div class="stat-card">
-                            <div class="stat-icon green"></div>
+                            <div class="stat-icon green">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.45 1-1 1H4v2h16v-2h-5c-.55 0-1-.45-1-1v-2.34"/><path d="M12 2a6 6 0 0 1 6 6v3.58a6 6 0 0 1-6 6 6 6 0 0 1-6-6V8a6 6 0 0 1 6-6z"/></svg>
+                            </div>
                             <div>
                                 <div class="stat-val" id="ds-badges">—</div>
                                 <div class="stat-lbl">Total Badge</div>
                             </div>
                         </div>
                         <div class="stat-card">
-                            <div class="stat-icon red"></div>
+                            <div class="stat-icon red">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                            </div>
                             <div>
                                 <div class="stat-val" id="ds-users">—</div>
                                 <div class="stat-lbl">Total Pengguna</div>
@@ -984,7 +1013,9 @@
 
                     <div class="quick-grid">
                         <a class="quick-card" onclick="nav('sites')">
-                            <div class="qc-icon"></div>
+                            <div class="qc-icon">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 22h16"/><path d="M4 18h16"/><path d="M4 14h16"/><path d="M6 18v-4"/><path d="M10 18v-4"/><path d="M14 18v-4"/><path d="M18 18v-4"/><path d="m12 2-8 6h16Z"/></svg>
+                            </div>
                             <div>
                                 <h4>Kelola Situs</h4>
                                 <p>
@@ -994,14 +1025,18 @@
                             </div>
                         </a>
                         <a class="quick-card" onclick="nav('trails')">
-                            <div class="qc-icon"></div>
+                            <div class="qc-icon">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="3 6 9 3 15 6 21 3 21 18 15 21 9 18 3 21"/><line x1="9" x2="9" y1="3" y2="18"/><line x1="15" x2="15" y1="6" y2="21"/></svg>
+                            </div>
                             <div>
                                 <h4>Kelola Trail</h4>
                                 <p>Atur rute dan urutan waypoint trail</p>
                             </div>
                         </a>
                         <a class="quick-card" onclick="nav('badges')">
-                            <div class="qc-icon"></div>
+                            <div class="qc-icon">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.45 1-1 1H4v2h16v-2h-5c-.55 0-1-.45-1-1v-2.34"/><path d="M12 2a6 6 0 0 1 6 6v3.58a6 6 0 0 1-6 6 6 6 0 0 1-6-6V8a6 6 0 0 1 6-6z"/></svg>
+                            </div>
                             <div>
                                 <h4>Kelola Badge</h4>
                                 <p>Kelola penghargaan untuk pengguna</p>
@@ -1030,6 +1065,14 @@
                     <div class="card">
                         <div class="card-body">
                             <table>
+                                <colgroup>
+                                    <col style="width: 10%">
+                                    <col style="width: 25%">
+                                    <col style="width: 20%">
+                                    <col style="width: 15%">
+                                    <col style="width: 15%">
+                                    <col style="width: 15%">
+                                </colgroup>
                                 <thead>
                                     <tr>
                                         <th>ID</th>
@@ -1072,6 +1115,13 @@
                     <div class="card">
                         <div class="card-body">
                             <table>
+                                <colgroup>
+                                    <col style="width: 10%">
+                                    <col style="width: 25%">
+                                    <col style="width: 15%">
+                                    <col style="width: 35%">
+                                    <col style="width: 15%">
+                                </colgroup>
                                 <thead>
                                     <tr>
                                         <th>ID</th>
@@ -1101,8 +1151,8 @@
                         <div>
                             <h1>Kelola Badge</h1>
                             <p>
-                                Kelola penghargaan yang diperoleh pengguna saat
-                                menyelesaikan trail
+                                Kelola penghargaan yang diperoleh pengguna
+                                berdasarkan trail, kategori situs, atau kondisi tertentu
                             </p>
                         </div>
                         <button
@@ -1119,7 +1169,7 @@
                                     <tr>
                                         <th>ID</th>
                                         <th>Nama Badge</th>
-                                        <th>Trail Terkait</th>
+                                        <th>Syarat</th>
                                         <th>Deskripsi</th>
                                         <th>Aksi</th>
                                     </tr>
@@ -1261,29 +1311,6 @@
                             class="form-ctrl"
                             placeholder="Tulis deskripsi lengkap situs ini…"
                         ></textarea>
-                    </div>
-
-                    <div class="section-divider">QR Code Verifikasi</div>
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label class="form-label">Token QR Code</label>
-                            <input
-                                type="text"
-                                id="f-siteQrToken"
-                                class="form-ctrl"
-                                placeholder="cth: qr-maimun"
-                                oninput="generateQrPreview()"
-                            />
-                            <p class="form-hint">
-                                Token unik untuk verifikasi check-in situs via QR Code.
-                            </p>
-                        </div>
-                        <div class="form-group" style="display:flex; flex-direction:column; align-items:center; justify-content:center;">
-                            <div id="qrcode-display"></div>
-                            <button type="button" class="btn btn-ghost btn-xs" id="btn-download-qr" onclick="downloadQrCode()" style="margin-top: 8px;">
-                                Unduh QR Code
-                            </button>
-                        </div>
                     </div>
 
                     <div class="section-divider">Lokasi di Peta</div>
@@ -1496,12 +1523,63 @@
                         </div>
                     </div>
                     <div class="form-group">
+                        <label class="form-label">Jenis Syarat <span style="color: var(--red)">*</span></label>
+                        <select id="f-badgeConditionType" class="form-ctrl" onchange="onBadgeConditionChange()">
+                            <option value="TRAIL">Menyelesaikan Trail</option>
+                            <option value="CATEGORY">Mengunjungi Situs Khusus (per Kategori)</option>
+                            <option value="CUSTOM">Kondisi Tertentu</option>
+                        </select>
+                    </div>
+
+                    <!-- TRAIL condition fields -->
+                    <div id="badge-cond-trail" class="form-group">
                         <label class="form-label">Trail Terkait</label>
                         <select id="f-badgeTrail" class="form-ctrl">
                             <option value="">— Pilih Trail —</option>
                         </select>
+                        <p class="form-hint">Badge diberikan saat user menyelesaikan semua situs pada trail ini.</p>
                     </div>
-                    <div class="form-group">
+
+                    <!-- CATEGORY condition fields -->
+                    <div id="badge-cond-category" class="form-group" style="display:none">
+                        <label class="form-label">Kategori Situs</label>
+                        <select id="f-badgeCategory" class="form-ctrl">
+                            <option value="">— Pilih Kategori —</option>
+                            <option value="Cagar Budaya">Cagar Budaya</option>
+                            <option value="Museum">Museum</option>
+                            <option value="Bangunan Bersejarah">Bangunan Bersejarah</option>
+                            <option value="Infrastruktur Bersejarah">Infrastruktur Bersejarah</option>
+                            <option value="Tempat Ibadah Bersejarah">Tempat Ibadah Bersejarah</option>
+                            <option value="Taman Bersejarah">Taman Bersejarah</option>
+                        </select>
+                        <p class="form-hint">Badge diberikan saat user mengunjungi semua situs dalam kategori ini.</p>
+                    </div>
+
+                    <!-- CUSTOM condition fields -->
+                    <div id="badge-cond-custom" style="display:none">
+                        <div class="section-divider">Kondisi Kunjungan</div>
+                        <div class="form-row three">
+                            <div class="form-group">
+                                <label class="form-label">Jumlah Situs</label>
+                                <input type="number" id="f-badgeRequiredVisits" class="form-ctrl" placeholder="cth: 5" min="1" />
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Dalam Waktu</label>
+                                <input type="number" id="f-badgeTimePeriodValue" class="form-ctrl" placeholder="cth: 1" min="1" />
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Satuan Waktu</label>
+                                <select id="f-badgeTimePeriodUnit" class="form-ctrl">
+                                    <option value="JAM">Jam</option>
+                                    <option value="HARI">Hari</option>
+                                    <option value="BULAN">Bulan</option>
+                                </select>
+                            </div>
+                        </div>
+                        <p class="form-hint">Badge diberikan saat user mengunjungi minimal sejumlah situs tertentu. Contoh: Mengunjungi 5 situs dalam 1 hari.</p>
+                    </div>
+
+                    <div class="form-group" style="margin-top:16px">
                         <label class="form-label">Deskripsi</label>
                         <input
                             type="text"
@@ -1526,10 +1604,10 @@
      SCRIPTS
 ═══════════════════════════════════════ -->
         <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-        <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
         <script>
             var allSites = [];
             var allTrails = [];
+            var allBadges = [];
             var editingSiteId = null;
             var editingTrailId = null;
             var editingBadgeId = null;
@@ -1668,7 +1746,6 @@
                         for (var i = 0; i < allSites.length; i++) {
                             var s = allSites[i];
                             var coordText = (s.latitude != null ? s.latitude.toFixed(4) : "-") + ", " + (s.longitude != null ? s.longitude.toFixed(4) : "-");
-                            var jsonData = JSON.stringify(JSON.stringify(s));
                             html += "<tr>";
                             html += "<td><code>" + esc(s.id) + "</code></td>";
                             html += "<td><strong>" + esc(s.name) + "</strong></td>";
@@ -1676,7 +1753,7 @@
                             html += "<td>" + statusPill(s.status) + "</td>";
                             html += '<td style="font-size:12px;color:var(--text-light);font-family:monospace">' + coordText + "</td>";
                             html += '<td><div class="actions">';
-                            html += '<button class="btn btn-yellow btn-xs" onclick=\'openSiteModal(' + jsonData + ')\'>Edit</button>';
+                            html += '<button class="btn btn-yellow btn-xs" onclick="openSiteModal(\'' + esc(s.id) + '\')">Edit</button>';
                             html += '<button class="btn btn-danger btn-xs" onclick="delSite(\'' + esc(s.id) + '\')">Hapus</button>';
                             html += "</div></td>";
                             html += "</tr>";
@@ -1699,8 +1776,13 @@
                 return '<span class="pill ' + (m[st] || "pill-gray") + '">' + esc(st || "-") + "</span>";
             }
 
-            function openSiteModal(jsonStr) {
-                var s = jsonStr ? JSON.parse(jsonStr) : null;
+            function openSiteModal(siteId) {
+                var s = null;
+                if (siteId) {
+                    for (var i = 0; i < allSites.length; i++) {
+                        if (allSites[i].id === siteId) { s = allSites[i]; break; }
+                    }
+                }
                 editingSiteId = s ? s.id : null;
                 document.getElementById("m-site-title").textContent = s ? "Edit Situs - " + s.id : "Tambah Situs Baru";
                 document.getElementById("f-siteId").value = s ? s.id : "";
@@ -1709,8 +1791,10 @@
                 document.getElementById("f-siteEra").value = s ? (s.era || "") : "";
                 document.getElementById("f-siteStatus").value = s ? (s.status || "") : "";
                 document.getElementById("f-siteImg").value = s ? (s.imageUrl || "") : "";
-                document.getElementById("f-siteDesc").value = s ? (s.description || "") : "";
-                document.getElementById("f-siteQrToken").value = s ? (s.qrCodeToken || "") : "";
+                var descText = s ? (s.description || "") : "";
+                descText = descText.replace(/<br\s*\/?>/gi, "\n");
+                descText = descText.replace(/<\/?strong>/gi, "");
+                document.getElementById("f-siteDesc").value = descText;
                 document.getElementById("f-siteLat").value = (s && s.latitude != null) ? s.latitude : "";
                 document.getElementById("f-siteLng").value = (s && s.longitude != null) ? s.longitude : "";
                 var q = (s && s.quiz) ? s.quiz : {};
@@ -1721,7 +1805,6 @@
                 document.getElementById("f-quizD").value = q.optionD || "";
                 document.getElementById("f-quizCorrect").value = q.correctOption || "A";
                 document.getElementById("m-site").classList.add("open");
-                generateQrPreview();
                 setTimeout(function () { initSiteMap(s); }, 180);
             }
 
@@ -1796,36 +1879,6 @@
                 editingSiteId = null;
             }
 
-            function generateQrPreview() {
-                var qrToken = document.getElementById("f-siteQrToken").value.trim();
-                var container = document.getElementById("qrcode-display");
-                container.innerHTML = "";
-                if (qrToken) {
-                    new QRCode(container, {
-                        text: qrToken,
-                        width: 128,
-                        height: 128,
-                        correctLevel: QRCode.CorrectLevel.H
-                    });
-                    document.getElementById("btn-download-qr").style.display = "inline-flex";
-                } else {
-                    document.getElementById("btn-download-qr").style.display = "none";
-                }
-            }
-
-            function downloadQrCode() {
-                var canvas = document.getElementById("qrcode-display").querySelector("canvas");
-                if (canvas) {
-                    var imgUrl = canvas.toDataURL("image/png");
-                    var siteName = document.getElementById("f-siteName").value.trim() || "situs";
-                    var link = document.createElement("a");
-                    link.download = "QR-" + siteName.replace(/\s+/g, "-") + ".png";
-                    link.href = imgUrl;
-                    link.click();
-                } else {
-                    toast("Error", "Gagal mengunduh QR Code. Pastikan token sudah diisi.", "error");
-                }
-            }
 
             function saveSite() {
                 var id = document.getElementById("f-siteId").value.trim();
@@ -1843,8 +1896,17 @@
                     era: document.getElementById("f-siteEra").value.trim(),
                     status: document.getElementById("f-siteStatus").value,
                     imageUrl: document.getElementById("f-siteImg").value.trim(),
-                    description: document.getElementById("f-siteDesc").value.trim(),
-                    qrCodeToken: document.getElementById("f-siteQrToken").value.trim(),
+                    description: (function () {
+                        var rawVal = document.getElementById("f-siteDesc").value.trim();
+                        var lines = rawVal.split("\n");
+                        for (var li = 0; li < lines.length; li++) {
+                            var line = lines[li].trim();
+                            if (line.endsWith(":") && line.length < 50) {
+                                lines[li] = "<strong>" + line + "</strong>";
+                            }
+                        }
+                        return lines.join("<br>");
+                    })(),
                     latitude: latV ? parseFloat(latV) : null,
                     longitude: lngV ? parseFloat(lngV) : null,
                     quiz: quizQ ? {
@@ -1880,6 +1942,10 @@
             }
 
             function delSite(id) {
+                if (["S01", "S02", "S09"].indexOf(id) >= 0) {
+                    toast("Ditolak", "Situs bawaan sistem tidak dapat dihapus.", "error");
+                    return;
+                }
                 if (!confirm('Hapus situs "' + id + '"? Tindakan ini tidak dapat dibatalkan.')) return;
                 fetch("/api/admin/sites/" + id, { method: "DELETE", credentials: "include" })
                     .then(function (r) {
@@ -1920,14 +1986,13 @@
                             namesHtml += '<span style="white-space:nowrap"><span class="pill pill-gray" style="font-size:10px">' + (k + 1) + '</span> ' + esc(found ? found.name : ids[k]) + '</span>';
                         }
                         if (!namesHtml) namesHtml = '<span style="color:var(--text-light)">-</span>';
-                        var jsonData = JSON.stringify(JSON.stringify(t));
                         html += "<tr>";
                         html += "<td><code>" + esc(t.id) + "</code></td>";
                         html += "<td><strong>" + esc(t.name) + "</strong></td>";
                         html += '<td style="text-align:center"><span class="pill pill-teal">' + ids.length + "</span></td>";
                         html += '<td style="font-size:12.5px;line-height:1.8">' + namesHtml + "</td>";
                         html += '<td><div class="actions">';
-                        html += '<button class="btn btn-yellow btn-xs" onclick=\'openTrailModal(' + jsonData + ')\'>Edit</button>';
+                        html += '<button class="btn btn-yellow btn-xs" onclick="openTrailModal(\'' + esc(t.id) + '\')">Edit</button>';
                         html += '<button class="btn btn-danger btn-xs" onclick="delTrail(\'' + esc(t.id) + '\')">Hapus</button>';
                         html += "</div></td>";
                         html += "</tr>";
@@ -1939,8 +2004,13 @@
                 });
             }
 
-            function openTrailModal(jsonStr) {
-                var t = jsonStr ? JSON.parse(jsonStr) : null;
+            function openTrailModal(trailId) {
+                var t = null;
+                if (trailId) {
+                    for (var i = 0; i < allTrails.length; i++) {
+                        if (allTrails[i].id === trailId) { t = allTrails[i]; break; }
+                    }
+                }
                 editingTrailId = t ? t.id : null;
                 document.getElementById("m-trail-title").textContent = t ? "Edit Trail - " + t.id : "Tambah Trail Baru";
                 document.getElementById("f-trailId").value = t ? t.id : "";
@@ -2101,6 +2171,7 @@
                     adminFetch("/api/admin/trails").catch(function () { return []; })
                 ]).then(function (res) {
                     var badges = Array.isArray(res[0]) ? res[0] : [];
+                    allBadges = badges;
                     allTrails = Array.isArray(res[1]) ? res[1] : [];
                     if (!badges.length) {
                         tb.innerHTML = emptyRow(5, "Belum ada badge.");
@@ -2109,19 +2180,33 @@
                     var html = "";
                     for (var i = 0; i < badges.length; i++) {
                         var b = badges[i];
-                        var trail = null;
-                        for (var j = 0; j < allTrails.length; j++) {
-                            if (allTrails[j].id === b.trailId) { trail = allTrails[j]; break; }
+                        var condType = b.conditionType || "TRAIL";
+                        var condHtml = "";
+                        if (condType === "TRAIL") {
+                            var trail = null;
+                            for (var j = 0; j < allTrails.length; j++) {
+                                if (allTrails[j].id === b.trailId) { trail = allTrails[j]; break; }
+                            }
+                            condHtml = '<span class="pill pill-teal">Trail</span> ';
+                            condHtml += trail ? esc(trail.name) : '<span style="color:var(--text-light)">-</span>';
+                        } else if (condType === "CATEGORY") {
+                            condHtml = '<span class="pill pill-yellow">Kategori</span> ';
+                            condHtml += b.categoryName ? esc(b.categoryName) : '-';
+                        } else if (condType === "CUSTOM") {
+                            condHtml = '<span class="pill pill-green">Kondisi</span> ';
+                            var rv = b.requiredVisits || '?';
+                            var tv = b.timePeriodValue || '?';
+                            var unitMap = { 'JAM': 'jam', 'HARI': 'hari', 'BULAN': 'bulan' };
+                            var tu = unitMap[b.timePeriodUnit] || '?';
+                            condHtml += esc(rv + ' situs / ' + tv + ' ' + tu);
                         }
-                        var trailHtml = trail ? '<span class="pill pill-teal">' + esc(trail.name) + '</span>' : '<span style="color:var(--text-light)">-</span>';
-                        var jsonData = JSON.stringify(JSON.stringify(b));
                         html += "<tr>";
                         html += "<td><code>" + esc(b.id) + "</code></td>";
                         html += "<td><strong>" + esc(b.name) + "</strong></td>";
-                        html += "<td>" + trailHtml + "</td>";
+                        html += '<td style="font-size:12.5px">' + condHtml + "</td>";
                         html += '<td style="color:var(--text-mid);max-width:240px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + esc(b.description || "-") + "</td>";
                         html += '<td><div class="actions">';
-                        html += '<button class="btn btn-yellow btn-xs" onclick=\'openBadgeModal(' + jsonData + ')\'>Edit</button>';
+                        html += '<button class="btn btn-yellow btn-xs" onclick="openBadgeModal(\'' + esc(b.id) + '\')">Edit</button>';
                         html += '<button class="btn btn-danger btn-xs" onclick="delBadge(\'' + esc(b.id) + '\')">Hapus</button>';
                         html += "</div></td>";
                         html += "</tr>";
@@ -2133,14 +2218,43 @@
                 });
             }
 
-            function openBadgeModal(jsonStr) {
-                var b = jsonStr ? JSON.parse(jsonStr) : null;
+            function onBadgeConditionChange() {
+                var condType = document.getElementById("f-badgeConditionType").value;
+                document.getElementById("badge-cond-trail").style.display = condType === "TRAIL" ? "block" : "none";
+                document.getElementById("badge-cond-category").style.display = condType === "CATEGORY" ? "block" : "none";
+                document.getElementById("badge-cond-custom").style.display = condType === "CUSTOM" ? "block" : "none";
+            }
+
+            function openBadgeModal(badgeId) {
+                var b = null;
+                if (badgeId) {
+                    for (var i = 0; i < allBadges.length; i++) {
+                        if (allBadges[i].id === badgeId) { b = allBadges[i]; break; }
+                    }
+                }
                 editingBadgeId = b ? b.id : null;
                 document.getElementById("m-badge-title").textContent = b ? "Edit Badge - " + b.id : "Tambah Badge Baru";
                 document.getElementById("f-badgeId").value = b ? b.id : "";
                 document.getElementById("f-badgeId").disabled = !!b;
                 document.getElementById("f-badgeName").value = b ? b.name : "";
                 document.getElementById("f-badgeDesc").value = b ? (b.description || "") : "";
+
+                // Set condition type
+                var condType = (b && b.conditionType) ? b.conditionType : "TRAIL";
+                document.getElementById("f-badgeConditionType").value = condType;
+
+                // Set category
+                document.getElementById("f-badgeCategory").value = (b && b.categoryName) ? b.categoryName : "";
+
+                // Set custom fields
+                document.getElementById("f-badgeRequiredVisits").value = (b && b.requiredVisits) ? b.requiredVisits : "";
+                document.getElementById("f-badgeTimePeriodValue").value = (b && b.timePeriodValue) ? b.timePeriodValue : "";
+                document.getElementById("f-badgeTimePeriodUnit").value = (b && b.timePeriodUnit) ? b.timePeriodUnit : "JAM";
+
+                // Show/hide condition sections
+                onBadgeConditionChange();
+
+                // Load trails for trail dropdown
                 var ready = allTrails.length > 0
                     ? Promise.resolve(allTrails)
                     : adminFetch("/api/admin/trails").then(function (d) { allTrails = Array.isArray(d) ? d : []; return allTrails; });
@@ -2169,11 +2283,17 @@
                     toast("Validasi", "ID dan Nama Badge wajib diisi.", "error");
                     return;
                 }
+                var condType = document.getElementById("f-badgeConditionType").value;
                 var isEdit = editingBadgeId !== null;
                 var payload = {
                     id: id,
                     name: name,
-                    trailId: document.getElementById("f-badgeTrail").value,
+                    conditionType: condType,
+                    trailId: condType === "TRAIL" ? document.getElementById("f-badgeTrail").value : "",
+                    categoryName: condType === "CATEGORY" ? document.getElementById("f-badgeCategory").value : "",
+                    requiredVisits: condType === "CUSTOM" ? (parseInt(document.getElementById("f-badgeRequiredVisits").value) || null) : null,
+                    timePeriodValue: condType === "CUSTOM" ? (parseInt(document.getElementById("f-badgeTimePeriodValue").value) || null) : null,
+                    timePeriodUnit: condType === "CUSTOM" ? document.getElementById("f-badgeTimePeriodUnit").value : "",
                     description: document.getElementById("f-badgeDesc").value.trim()
                 };
                 var url = isEdit ? "/api/admin/badges/" + editingBadgeId : "/api/admin/badges";

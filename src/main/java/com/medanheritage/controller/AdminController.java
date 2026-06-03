@@ -113,6 +113,12 @@ public class AdminController {
             @PathVariable String id,
             HttpSession session) {
         if (!isAdmin(session)) return forbidden();
+        if ("S01".equalsIgnoreCase(id) || "S02".equalsIgnoreCase(id) || "S09".equalsIgnoreCase(id)) {
+            Map<String, Object> res = new LinkedHashMap<>();
+            res.put("success", false);
+            res.put("message", "Situs dengan ID " + id.toUpperCase() + " tidak dapat dihapus karena merupakan data bawaan sistem.");
+            return ResponseEntity.badRequest().body(res);
+        }
         Map<String, Object> res = new LinkedHashMap<>();
         boolean deleted = heritageService.deleteSite(id);
         if (!deleted) {
