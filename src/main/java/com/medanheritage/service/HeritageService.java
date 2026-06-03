@@ -467,7 +467,7 @@ public class HeritageService {
 
     public Review addReview(
         String siteId,
-        int rating,
+        double rating,
         String comment,
         Long explorerId
     ) {

@@ -17,7 +17,7 @@ public class Review {
     @JoinColumn(name = "user_id")
     private Explorer explorer;
     
-    private int rating;
+    private double rating;
 
     @Column(length = 1000)
     private String comment;
@@ -27,7 +27,7 @@ public class Review {
     public Review() {
     }
 
-    public Review(String siteId, Explorer explorer, int rating, String comment, LocalDateTime createdAt) {
+    public Review(String siteId, Explorer explorer, double rating, String comment, LocalDateTime createdAt) {
         this.siteId = siteId;
         this.explorer = explorer;
         this.rating = rating;
@@ -59,11 +59,11 @@ public class Review {
         this.explorer = explorer;
     }
 
-    public int getRating() {
+    public double getRating() {
         return rating;
     }
 
-    public void setRating(int rating) {
+    public void setRating(double rating) {
         this.rating = rating;
     }
 
