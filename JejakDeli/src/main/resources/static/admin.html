@@ -1,0 +1,2381 @@
+<!doctype html>
+<html lang="id">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>JejakDeli — Panel Admin</title>
+        <link
+            rel="stylesheet"
+            href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+        />
+        <link
+            href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
+            rel="stylesheet"
+        />
+        <style>
+            :root {
+                --yellow: #e6b800;
+                --yellow-hover: #d4a800;
+                --yellow-light: #fff8db;
+                --teal: #e6b800;
+                --teal-light: #fff8db;
+                --green: #e6b800;
+                --green-light: #fff8db;
+                --red: #c62828;
+                --red-light: #ffebee;
+                --bg: #f4f5f7;
+                --white: #ffffff;
+                --border: #e0e0e0;
+                --text: #1a1a1a;
+                --text-mid: #555;
+                --text-light: #888;
+                --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.08);
+                --shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+                --shadow-md: 0 4px 20px rgba(0, 0, 0, 0.13);
+                --sidebar-w: 230px;
+                --nav-h: 56px;
+                --radius: 8px;
+            }
+            *,
+            *::before,
+            *::after {
+                box-sizing: border-box;
+                margin: 0;
+                padding: 0;
+            }
+            body {
+                font-family: "Inter", sans-serif;
+                background: var(--bg);
+                color: var(--text);
+                font-size: 14px;
+            }
+
+            /* ── NAVBAR ── */
+            .navbar {
+                position: fixed;
+                top: 0;
+                left: 0;
+                right: 0;
+                height: var(--nav-h);
+                background: var(--yellow);
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                padding: 0 20px;
+                z-index: 1000;
+                box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+            }
+            .navbar-brand {
+                display: flex;
+                align-items: center;
+                gap: 12px;
+                margin-left: 24px;
+            }
+            .navbar-brand .logo {
+                font-size: 24px;
+            }
+            .navbar-brand .brand-text {
+                font-size: 20px;
+                font-weight: 700;
+                color: #1a1a1a;
+            }
+            .navbar-brand .brand-badge {
+                font-size: 12px;
+                font-weight: 700;
+                letter-spacing: 1px;
+                background: #1a1a1a;
+                color: var(--yellow);
+                padding: 4px 10px;
+                border-radius: 4px;
+                text-transform: uppercase;
+            }
+            .navbar-right {
+                display: flex;
+                align-items: center;
+                gap: 12px;
+                margin-right: 24px;
+            }
+            .navbar-right .btn {
+                padding: 8px 16px;
+                font-size: 13.5px;
+            }
+            .navbar-user {
+                display: flex;
+                align-items: center;
+                gap: 10px;
+                background: rgba(0, 0, 0, 0.05);
+                border-radius: 6px;
+                padding: 6px 14px;
+            }
+            .navbar-user .avatar {
+                width: 32px;
+                height: 32px;
+                border-radius: 50%;
+                background: #1a1a1a;
+                color: var(--yellow);
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                font-size: 14px;
+                font-weight: 700;
+                flex-shrink: 0;
+            }
+            .navbar-user .uname {
+                font-size: 15px;
+                font-weight: 600;
+                color: #1a1a1a;
+            }
+            .navbar-user .urole {
+                font-size: 11px;
+                color: #555;
+                font-weight: 600;
+                letter-spacing: 0.5px;
+                text-transform: uppercase;
+            }
+
+            /* ── BUTTONS ── */
+            .btn {
+                display: inline-flex;
+                align-items: center;
+                gap: 6px;
+                padding: 7px 14px;
+                border: none;
+                border-radius: 6px;
+                font-family: inherit;
+                font-size: 13px;
+                font-weight: 600;
+                cursor: pointer;
+                transition: all 0.15s;
+                text-decoration: none;
+                white-space: nowrap;
+            }
+            .btn:active {
+                transform: scale(0.97);
+            }
+            .btn-sm {
+                padding: 5px 11px;
+                font-size: 12px;
+            }
+            .btn-xs {
+                padding: 3px 9px;
+                font-size: 11px;
+            }
+            .btn-primary {
+                background: var(--teal);
+                color: #fff;
+            }
+            .btn-primary:hover {
+                background: var(--yellow-hover);
+            }
+            .btn-yellow {
+                background: var(--yellow);
+                color: #1a1a1a;
+            }
+            .btn-yellow:hover {
+                background: var(--yellow-hover);
+            }
+            .btn-danger {
+                background: var(--red);
+                color: #fff;
+            }
+            .btn-danger:hover {
+                background: #b71c1c;
+            }
+            .btn-ghost {
+                background: #fff;
+                color: var(--text-mid);
+                border: 1px solid var(--border);
+            }
+            .btn-ghost:hover {
+                background: #f5f5f5;
+            }
+            .btn-dark {
+                background: rgba(0, 0, 0, 0.08);
+                color: #1a1a1a;
+                border: 1px solid rgba(0, 0, 0, 0.15);
+            }
+            .btn-dark:hover {
+                background: rgba(0, 0, 0, 0.15);
+            }
+
+            /* ── SIDEBAR ── */
+            .sidebar {
+                position: fixed;
+                top: var(--nav-h);
+                left: 0;
+                bottom: 0;
+                width: var(--sidebar-w);
+                background: #fff;
+                border-right: 1px solid var(--border);
+                overflow-y: auto;
+                z-index: 900;
+                display: flex;
+                flex-direction: column;
+            }
+            .sidebar-section-label {
+                font-size: 10px;
+                font-weight: 700;
+                letter-spacing: 1.2px;
+                text-transform: uppercase;
+                color: var(--text-light);
+                padding: 16px 18px 6px;
+            }
+            .sidebar-menu {
+                list-style: none;
+                padding: 12px 8px;
+            }
+            .sidebar-menu li {
+                margin-bottom: 8px;
+            }
+            .sidebar-menu li a {
+                display: flex;
+                align-items: center;
+                gap: 10px;
+                padding: 9px 16px;
+                border-radius: 6px;
+                text-decoration: none;
+                background-color: transparent;
+                color: #00796b;
+                border: 1px solid #00796b;
+                font-size: 13.5px;
+                font-weight: 600;
+                transition: all 0.2s ease-in-out;
+            }
+            .sidebar-menu li a:hover {
+                background-color: #e0f2f1;
+                color: #00796b;
+                transform: translateY(-1px);
+                box-shadow: 0 2px 6px rgba(0, 121, 107, 0.15);
+            }
+            .sidebar-menu li a.active {
+                background-color: #00796b;
+                color: #ffffff;
+                border-color: #00796b;
+                font-weight: 700;
+            }
+            .sidebar-menu li a .menu-icon {
+                font-size: 16px;
+                width: 20px;
+                text-align: center;
+                flex-shrink: 0;
+            }
+            .sidebar-footer {
+                margin-top: auto;
+                padding: 12px;
+                border-top: 1px solid var(--border);
+            }
+            .sidebar-footer a {
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                gap: 8px;
+                padding: 9px 12px;
+                border-radius: 6px;
+                text-decoration: none;
+                background-color: transparent;
+                color: var(--text-mid);
+                border: 1px solid var(--border);
+                font-size: 13px;
+                font-weight: 600;
+                transition: all 0.2s ease-in-out;
+            }
+            .sidebar-footer a:hover {
+                background-color: #f5f5f5;
+                color: var(--text);
+                transform: translateY(-1px);
+            }
+
+            /* ── MAIN CONTENT ── */
+            .main {
+                margin-left: var(--sidebar-w);
+                padding-top: var(--nav-h);
+                min-height: 100vh;
+            }
+            .page-body {
+                padding: 28px;
+            }
+
+            /* ── PAGE HEADER ── */
+            .page-header {
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                margin-bottom: 24px;
+            }
+            .page-header h1 {
+                font-size: 22px;
+                font-weight: 700;
+            }
+            .page-header p {
+                font-size: 13px;
+                color: var(--text-mid);
+                margin-top: 3px;
+            }
+
+            /* ── STAT CARDS ── */
+            .stat-grid {
+                display: grid;
+                grid-template-columns: repeat(4, 1fr);
+                gap: 16px;
+                margin-bottom: 28px;
+            }
+            .stat-card {
+                background: #fff;
+                border: 1px solid var(--border);
+                border-radius: var(--radius);
+                padding: 20px;
+                box-shadow: var(--shadow-sm);
+                display: flex;
+                align-items: center;
+                gap: 16px;
+            }
+            .stat-icon {
+                width: 48px;
+                height: 48px;
+                border-radius: 10px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                font-size: 22px;
+                flex-shrink: 0;
+            }
+            .stat-icon.yellow {
+                background: var(--yellow-light);
+            }
+            .stat-icon.teal {
+                background: var(--teal-light);
+            }
+            .stat-icon.green {
+                background: var(--green-light);
+            }
+            .stat-icon.red {
+                background: var(--red-light);
+            }
+            .stat-val {
+                font-size: 30px;
+                font-weight: 700;
+                line-height: 1;
+            }
+            .stat-lbl {
+                font-size: 12px;
+                color: var(--text-light);
+                margin-top: 3px;
+            }
+
+            /* ── TABLE ── */
+            .card {
+                background: #fff;
+                border: 1px solid var(--border);
+                border-radius: var(--radius);
+                box-shadow: var(--shadow-sm);
+                overflow: hidden;
+            }
+            .card-header {
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                padding: 16px 20px;
+                border-bottom: 1px solid var(--border);
+                background: #fafafa;
+            }
+            .card-header h3 {
+                font-size: 15px;
+                font-weight: 700;
+            }
+            .card-body {
+                padding: 0;
+            }
+            table {
+                width: 100%;
+                border-collapse: collapse;
+                font-size: 13.5px;
+            }
+            thead th {
+                padding: 11px 16px;
+                text-align: left;
+                font-size: 11px;
+                font-weight: 700;
+                letter-spacing: 0.5px;
+                text-transform: uppercase;
+                color: var(--text-light);
+                border-bottom: 1px solid var(--border);
+                background: #fafafa;
+            }
+            tbody td {
+                padding: 12px 16px;
+                border-bottom: 1px solid #f5f5f5;
+                vertical-align: middle;
+            }
+            tbody tr:last-child td {
+                border-bottom: none;
+            }
+            tbody tr:hover td {
+                background: #fafffe;
+            }
+            .actions {
+                display: flex;
+                gap: 6px;
+            }
+
+            /* ── BADGES / PILLS ── */
+            .pill {
+                display: inline-block;
+                padding: 3px 10px;
+                border-radius: 100px;
+                font-size: 11px;
+                font-weight: 700;
+            }
+            .pill-yellow {
+                background: var(--yellow-light);
+                color: #7a5c00;
+                border: 1px solid #e6b80040;
+            }
+            .pill-teal {
+                background: var(--teal-light);
+                color: var(--teal);
+                border: 1px solid #b2dfdb;
+            }
+            .pill-green {
+                background: var(--green-light);
+                color: var(--green);
+                border: 1px solid #a5d6a7;
+            }
+            .pill-gray {
+                background: #f0f0f0;
+                color: #666;
+                border: 1px solid #ddd;
+            }
+            .pill-red {
+                background: var(--red-light);
+                color: var(--red);
+                border: 1px solid #ef9a9a;
+            }
+
+            /* ── EMPTY / SPINNER ── */
+            .empty {
+                padding: 48px;
+                text-align: center;
+                color: var(--text-light);
+            }
+            .empty .empty-ico {
+                font-size: 40px;
+                margin-bottom: 10px;
+            }
+            .empty p {
+                font-size: 13.5px;
+            }
+            .spinner-row td {
+                padding: 40px;
+                text-align: center;
+                color: var(--text-light);
+            }
+            .spinner {
+                display: inline-block;
+                width: 22px;
+                height: 22px;
+                border: 3px solid #e0e0e0;
+                border-top-color: var(--yellow);
+                border-radius: 50%;
+                animation: spin 0.7s linear infinite;
+                vertical-align: middle;
+                margin-right: 8px;
+            }
+            @keyframes spin {
+                to {
+                    transform: rotate(360deg);
+                }
+            }
+
+            /* ── MODAL ── */
+            .modal-backdrop {
+                display: none;
+                position: fixed;
+                inset: 0;
+                background: rgba(0, 0, 0, 0.45);
+                backdrop-filter: blur(2px);
+                z-index: 2000;
+                overflow-y: auto;
+                padding: 32px 16px;
+            }
+            .modal-backdrop.open {
+                display: block;
+            }
+            .modal-box {
+                background: #fff;
+                border-radius: 12px;
+                width: 100%;
+                max-width: 640px;
+                margin: 0 auto;
+                box-shadow: var(--shadow-md);
+                animation: modalIn 0.2s ease;
+            }
+            .modal-box.wide {
+                max-width: 780px;
+            }
+            @keyframes modalIn {
+                from {
+                    opacity: 0;
+                    transform: translateY(16px);
+                }
+                to {
+                    opacity: 1;
+                    transform: translateY(0);
+                }
+            }
+            .modal-head {
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                padding: 18px 22px;
+                border-bottom: 1px solid var(--border);
+            }
+            .modal-head h3 {
+                font-size: 16px;
+                font-weight: 700;
+            }
+            .modal-close {
+                width: 30px;
+                height: 30px;
+                border: none;
+                background: none;
+                font-size: 18px;
+                cursor: pointer;
+                color: var(--text-light);
+                border-radius: 6px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                transition: background 0.15s;
+            }
+            .modal-close:hover {
+                background: #f0f0f0;
+                color: var(--text);
+            }
+            .modal-body {
+                padding: 22px;
+            }
+            .modal-foot {
+                display: flex;
+                justify-content: flex-end;
+                gap: 10px;
+                padding: 16px 22px;
+                border-top: 1px solid var(--border);
+                background: #fafafa;
+                border-radius: 0 0 12px 12px;
+            }
+
+            /* ── FORM ── */
+            .form-group {
+                margin-bottom: 16px;
+            }
+            .form-group:last-child {
+                margin-bottom: 0;
+            }
+            .form-label {
+                display: block;
+                font-size: 12.5px;
+                font-weight: 700;
+                margin-bottom: 6px;
+                color: var(--text);
+            }
+            .form-hint {
+                font-size: 11.5px;
+                color: var(--text-light);
+                margin-top: 4px;
+            }
+            .form-ctrl {
+                width: 100%;
+                padding: 9px 12px;
+                border: 1.5px solid var(--border);
+                border-radius: 6px;
+                font-family: inherit;
+                font-size: 13.5px;
+                color: var(--text);
+                background: #fff;
+                outline: none;
+                transition: border-color 0.15s;
+            }
+            .form-ctrl:focus {
+                border-color: var(--yellow);
+                box-shadow: 0 0 0 3px #e6b80018;
+            }
+            .form-ctrl:disabled {
+                background: #f8f8f8;
+                color: var(--text-light);
+                cursor: not-allowed;
+            }
+            textarea.form-ctrl {
+                resize: vertical;
+                min-height: 90px;
+                line-height: 1.6;
+            }
+            .form-row {
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                gap: 14px;
+            }
+            .form-row.three {
+                grid-template-columns: 1fr 1fr 1fr;
+            }
+            .section-divider {
+                font-size: 11px;
+                font-weight: 700;
+                text-transform: uppercase;
+                letter-spacing: 0.8px;
+                color: var(--teal);
+                padding: 6px 0;
+                margin: 18px 0 14px;
+                border-bottom: 1px solid var(--teal-light);
+            }
+
+            /* ── MAP ── */
+            #adminSiteMap {
+                height: 260px;
+                border-radius: 6px;
+                border: 1.5px solid var(--border);
+                z-index: 0;
+                margin-top: 6px;
+            }
+            .coord-row {
+                display: grid;
+                grid-template-columns: 1fr 1fr auto;
+                gap: 10px;
+                align-items: flex-end;
+                margin-top: 10px;
+            }
+
+            /* ── CHECKLIST (trail situs) ── */
+            .checklist {
+                border: 1.5px solid var(--border);
+                border-radius: 6px;
+                max-height: 240px;
+                overflow-y: auto;
+            }
+            .checklist-item {
+                display: flex;
+                align-items: center;
+                gap: 8px;
+                padding: 9px 12px;
+                border-bottom: 1px solid #f0f0f0;
+                transition: background 0.1s;
+            }
+            .checklist-item:last-child {
+                border-bottom: none;
+            }
+            .checklist-item:hover {
+                background: #fafffe;
+            }
+            .checklist-item input[type="checkbox"] {
+                width: 15px;
+                height: 15px;
+                accent-color: var(--yellow);
+                flex-shrink: 0;
+                cursor: pointer;
+            }
+            .checklist-item label {
+                flex: 1;
+                cursor: pointer;
+                font-size: 13px;
+            }
+            .order-btn {
+                width: 24px;
+                height: 24px;
+                border: 1px solid var(--border);
+                border-radius: 4px;
+                background: #fff;
+                cursor: pointer;
+                font-size: 12px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                color: var(--text-mid);
+                transition: background 0.1s;
+            }
+            .order-btn:hover {
+                background: var(--yellow-light);
+            }
+            .route-preview {
+                margin-top: 10px;
+                padding: 10px 14px;
+                background: #f9f9f9;
+                border: 1px dashed var(--border);
+                border-radius: 6px;
+                font-size: 12.5px;
+                color: var(--text-mid);
+                line-height: 1.9;
+                min-height: 40px;
+            }
+
+            /* ── TOAST ── */
+            #toastBox {
+                position: fixed;
+                top: 68px;
+                right: 20px;
+                z-index: 9999;
+                display: flex;
+                flex-direction: column;
+                gap: 8px;
+                pointer-events: none;
+                min-width: 280px;
+            }
+            .toast {
+                padding: 12px 18px;
+                border-radius: 8px;
+                font-size: 13.5px;
+                font-weight: 500;
+                box-shadow: var(--shadow-md);
+                pointer-events: auto;
+                animation: toastIn 0.25s ease;
+                display: flex;
+                align-items: flex-start;
+                gap: 10px;
+            }
+            .toast-ico {
+                font-size: 16px;
+                flex-shrink: 0;
+                margin-top: 1px;
+            }
+            .toast-msg {
+                flex: 1;
+            }
+            .toast-msg strong {
+                display: block;
+                font-size: 13px;
+                margin-bottom: 1px;
+            }
+            .toast-msg span {
+                font-size: 12px;
+                opacity: 0.8;
+            }
+            .toast.success {
+                background: #e8f5e9;
+                color: #1b5e20;
+                border-left: 4px solid var(--green);
+            }
+            .toast.error {
+                background: #ffebee;
+                color: #b71c1c;
+                border-left: 4px solid var(--red);
+            }
+            .toast.info {
+                background: var(--yellow-light);
+                color: #7a5c00;
+                border-left: 4px solid var(--yellow);
+            }
+            @keyframes toastIn {
+                from {
+                    opacity: 0;
+                    transform: translateX(30px);
+                }
+                to {
+                    opacity: 1;
+                    transform: translateX(0);
+                }
+            }
+
+            /* ── SECTION HIDDEN ── */
+            .hidden {
+                display: none !important;
+            }
+
+            /* ── WELCOME CARD ── */
+            .welcome-card {
+                background: linear-gradient(135deg, var(--yellow) 0%, #ffeb99 100%);
+                border-radius: var(--radius);
+                padding: 28px 32px;
+                margin-bottom: 24px;
+                color: #1a1a1a;
+                display: flex;
+                align-items: center;
+                gap: 24px;
+                box-shadow: var(--shadow-sm);
+            }
+            .welcome-card .wc-icon {
+                font-size: 48px;
+                flex-shrink: 0;
+            }
+            .welcome-card h2 {
+                font-size: 20px;
+                font-weight: 700;
+                margin-bottom: 6px;
+            }
+            .welcome-card p {
+                font-size: 13px;
+                color: #444;
+                line-height: 1.6;
+            }
+
+            /* ── QUICK ACTIONS ── */
+            .quick-grid {
+                display: grid;
+                grid-template-columns: repeat(3, 1fr);
+                gap: 14px;
+            }
+            .quick-card {
+                background: #fff;
+                border: 1.5px solid var(--border);
+                border-radius: var(--radius);
+                padding: 18px 20px;
+                cursor: pointer;
+                transition: all 0.15s;
+                box-shadow: var(--shadow-sm);
+                display: flex;
+                align-items: center;
+                gap: 14px;
+                text-decoration: none;
+            }
+            .quick-card:hover {
+                border-color: var(--yellow);
+                box-shadow: var(--shadow);
+                transform: translateY(-1px);
+            }
+            .quick-card .qc-icon {
+                width: 44px;
+                height: 44px;
+                border-radius: 10px;
+                background: var(--yellow-light);
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                font-size: 20px;
+                flex-shrink: 0;
+                color: #7a5c00;
+            }
+            .quick-card h4 {
+                font-size: 13.5px;
+                font-weight: 700;
+                margin-bottom: 2px;
+            }
+            .quick-card p {
+                font-size: 12px;
+                color: var(--text-light);
+            }
+
+            /* ── CODE ── */
+            code {
+                font-family: "Courier New", monospace;
+                font-size: 12px;
+                background: #f0f0f0;
+                padding: 2px 6px;
+                border-radius: 4px;
+            }
+
+            /* ── RESPONSIVE ── */
+            @media (max-width: 900px) {
+                .stat-grid {
+                    grid-template-columns: 1fr 1fr;
+                }
+                .quick-grid {
+                    grid-template-columns: 1fr 1fr;
+                }
+            }
+            @media (max-width: 700px) {
+                :root {
+                    --sidebar-w: 0px;
+                }
+                .sidebar {
+                    display: none;
+                }
+                .main {
+                    margin-left: 0;
+                }
+                .stat-grid {
+                    grid-template-columns: 1fr 1fr;
+                }
+                .form-row {
+                    grid-template-columns: 1fr;
+                }
+                .form-row.three {
+                    grid-template-columns: 1fr;
+                }
+                .coord-row {
+                    grid-template-columns: 1fr 1fr;
+                }
+            }
+            @media (max-width: 480px) {
+                .stat-grid {
+                    grid-template-columns: 1fr;
+                }
+                .quick-grid {
+                    grid-template-columns: 1fr;
+                }
+                .page-body {
+                    padding: 16px;
+                }
+                .welcome-card {
+                    flex-direction: column;
+                    text-align: center;
+                    padding: 24px;
+                }
+            }
+        </style>
+    </head>
+    <body>
+        <!-- ═══════════════════════════════════════
+     NAVBAR
+═══════════════════════════════════════ -->
+        <nav class="navbar">
+            <div class="navbar-brand">
+                <span class="brand-text">JejakDeli</span>
+                <span class="brand-badge">Panel Admin</span>
+            </div>
+            <div class="navbar-right">
+                <div class="navbar-user">
+                    <div class="avatar" id="adminAvatar">A</div>
+                    <div>
+                        <div class="uname" id="adminName">Admin</div>
+                        <div class="urole">Administrator</div>
+                    </div>
+                </div>
+                <button class="btn btn-dark btn-sm" onclick="goToApp()">
+                    Ke Aplikasi
+                </button>
+                <button class="btn btn-danger btn-sm" onclick="doLogout()">
+                    Keluar
+                </button>
+            </div>
+        </nav>
+
+        <!-- ═══════════════════════════════════════
+     SIDEBAR
+═══════════════════════════════════════ -->
+        <aside class="sidebar">
+            <div class="sidebar-section-label">Menu</div>
+            <ul class="sidebar-menu">
+                <li><a href="#" class="active" data-sec="dashboard" onclick="nav('dashboard');return false;">Dashboard</a></li>
+                <li><a href="#" data-sec="sites" onclick="nav('sites');return false;">Kelola Situs</a></li>
+                <li><a href="#" data-sec="trails" onclick="nav('trails');return false;">Kelola Trail</a></li>
+                <li><a href="#" data-sec="badges" onclick="nav('badges');return false;">Kelola Badge</a></li>
+                <li><a href="#" data-sec="users" onclick="nav('users');return false;">Daftar Pengguna</a></li>
+            </ul>
+            <div class="sidebar-footer">
+                <a href="#" onclick="goToApp();return false;">Ke Aplikasi</a>
+            </div>
+        </aside>
+
+        <!-- ═══════════════════════════════════════
+     MAIN
+═══════════════════════════════════════ -->
+        <main class="main">
+            <div class="page-body">
+                <!-- ▸ DASHBOARD ◂ -->
+                <div id="sec-dashboard">
+                    <div class="welcome-card">
+                        <div>
+                            <h2>Panel Admin JejakDeli</h2>
+                            <p>
+                                Kelola semua konten JejakDeli — situs
+                                bersejarah, rute trail, badge, dan pengguna —
+                                dari satu tempat. Pilih menu di sidebar untuk
+                                mulai.
+                            </p>
+                        </div>
+                    </div>
+
+                    <div class="stat-grid">
+                        <div class="stat-card">
+                            <div class="stat-icon yellow">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 22h16"/><path d="M4 18h16"/><path d="M4 14h16"/><path d="M6 18v-4"/><path d="M10 18v-4"/><path d="M14 18v-4"/><path d="M18 18v-4"/><path d="m12 2-8 6h16Z"/></svg>
+                            </div>
+                            <div>
+                                <div class="stat-val" id="ds-sites">—</div>
+                                <div class="stat-lbl">Total Situs</div>
+                            </div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-icon teal">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="3 6 9 3 15 6 21 3 21 18 15 21 9 18 3 21"/><line x1="9" x2="9" y1="3" y2="18"/><line x1="15" x2="15" y1="6" y2="21"/></svg>
+                            </div>
+                            <div>
+                                <div class="stat-val" id="ds-trails">—</div>
+                                <div class="stat-lbl">Total Trail</div>
+                            </div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-icon green">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.45 1-1 1H4v2h16v-2h-5c-.55 0-1-.45-1-1v-2.34"/><path d="M12 2a6 6 0 0 1 6 6v3.58a6 6 0 0 1-6 6 6 6 0 0 1-6-6V8a6 6 0 0 1 6-6z"/></svg>
+                            </div>
+                            <div>
+                                <div class="stat-val" id="ds-badges">—</div>
+                                <div class="stat-lbl">Total Badge</div>
+                            </div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-icon red">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                            </div>
+                            <div>
+                                <div class="stat-val" id="ds-users">—</div>
+                                <div class="stat-lbl">Total Pengguna</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="quick-grid">
+                        <a class="quick-card" onclick="nav('sites')">
+                            <div class="qc-icon">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 22h16"/><path d="M4 18h16"/><path d="M4 14h16"/><path d="M6 18v-4"/><path d="M10 18v-4"/><path d="M14 18v-4"/><path d="M18 18v-4"/><path d="m12 2-8 6h16Z"/></svg>
+                            </div>
+                            <div>
+                                <h4>Kelola Situs</h4>
+                                <p>
+                                    Tambah, edit, hapus, dan atur koordinat
+                                    situs
+                                </p>
+                            </div>
+                        </a>
+                        <a class="quick-card" onclick="nav('trails')">
+                            <div class="qc-icon">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="3 6 9 3 15 6 21 3 21 18 15 21 9 18 3 21"/><line x1="9" x2="9" y1="3" y2="18"/><line x1="15" x2="15" y1="6" y2="21"/></svg>
+                            </div>
+                            <div>
+                                <h4>Kelola Trail</h4>
+                                <p>Atur rute dan urutan waypoint trail</p>
+                            </div>
+                        </a>
+                        <a class="quick-card" onclick="nav('badges')">
+                            <div class="qc-icon">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.45 1-1 1H4v2h16v-2h-5c-.55 0-1-.45-1-1v-2.34"/><path d="M12 2a6 6 0 0 1 6 6v3.58a6 6 0 0 1-6 6 6 6 0 0 1-6-6V8a6 6 0 0 1 6-6z"/></svg>
+                            </div>
+                            <div>
+                                <h4>Kelola Badge</h4>
+                                <p>Kelola penghargaan untuk pengguna</p>
+                            </div>
+                        </a>
+                    </div>
+                </div>
+
+                <!-- ▸ KELOLA SITUS ◂ -->
+                <div id="sec-sites" class="hidden">
+                    <div class="page-header">
+                        <div>
+                            <h1>Kelola Situs</h1>
+                            <p>
+                                Tambah, edit, hapus situs bersejarah dan atur
+                                koordinat di peta
+                            </p>
+                        </div>
+                        <button
+                            class="btn btn-primary"
+                            onclick="openSiteModal()"
+                        >
+                            + Tambah Situs
+                        </button>
+                    </div>
+                    <div class="card">
+                        <div class="card-body">
+                            <table>
+                                <colgroup>
+                                    <col style="width: 10%">
+                                    <col style="width: 25%">
+                                    <col style="width: 20%">
+                                    <col style="width: 15%">
+                                    <col style="width: 15%">
+                                    <col style="width: 15%">
+                                </colgroup>
+                                <thead>
+                                    <tr>
+                                        <th>ID</th>
+                                        <th>Nama Situs</th>
+                                        <th>Era</th>
+                                        <th>Status</th>
+                                        <th>Koordinat</th>
+                                        <th>Aksi</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="tb-sites">
+                                    <tr class="spinner-row">
+                                        <td colspan="6">
+                                            <span class="spinner"></span>Memuat…
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ▸ KELOLA TRAIL ◂ -->
+                <div id="sec-trails" class="hidden">
+                    <div class="page-header">
+                        <div>
+                            <h1>Kelola Trail</h1>
+                            <p>
+                                Buat dan atur rute trail beserta urutan situs
+                                yang dikunjungi
+                            </p>
+                        </div>
+                        <button
+                            class="btn btn-primary"
+                            onclick="openTrailModal()"
+                        >
+                            + Tambah Trail
+                        </button>
+                    </div>
+                    <div class="card">
+                        <div class="card-body">
+                            <table>
+                                <colgroup>
+                                    <col style="width: 10%">
+                                    <col style="width: 25%">
+                                    <col style="width: 15%">
+                                    <col style="width: 35%">
+                                    <col style="width: 15%">
+                                </colgroup>
+                                <thead>
+                                    <tr>
+                                        <th>ID</th>
+                                        <th>Nama Trail</th>
+                                        <th style="text-align: center">
+                                            Situs
+                                        </th>
+                                        <th>Urutan Rute</th>
+                                        <th>Aksi</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="tb-trails">
+                                    <tr class="spinner-row">
+                                        <td colspan="5">
+                                            <span class="spinner"></span>Memuat…
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ▸ KELOLA BADGE ◂ -->
+                <div id="sec-badges" class="hidden">
+                    <div class="page-header">
+                        <div>
+                            <h1>Kelola Badge</h1>
+                            <p>
+                                Kelola penghargaan yang diperoleh pengguna
+                                berdasarkan trail, kategori situs, atau kondisi tertentu
+                            </p>
+                        </div>
+                        <button
+                            class="btn btn-primary"
+                            onclick="openBadgeModal()"
+                        >
+                            + Tambah Badge
+                        </button>
+                    </div>
+                    <div class="card">
+                        <div class="card-body">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>ID</th>
+                                        <th>Nama Badge</th>
+                                        <th>Syarat</th>
+                                        <th>Deskripsi</th>
+                                        <th>Aksi</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="tb-badges">
+                                    <tr class="spinner-row">
+                                        <td colspan="5">
+                                            <span class="spinner"></span>Memuat…
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ▸ KELOLA PENGGUNA ◂ -->
+                <div id="sec-users" class="hidden">
+                    <div class="page-header">
+                        <div>
+                            <h1>Daftar Pengguna</h1>
+                            <p>
+                                Pantau seluruh akun yang terdaftar di JejakDeli
+                            </p>
+                        </div>
+                    </div>
+                    <div class="card">
+                        <div class="card-body">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>ID</th>
+                                        <th>Username</th>
+                                        <th>Email</th>
+                                        <th>Role</th>
+                                        <th>Level</th>
+                                        <th>XP</th>
+                                        <th>Dikunjungi</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="tb-users">
+                                    <tr class="spinner-row">
+                                        <td colspan="7">
+                                            <span class="spinner"></span>Memuat…
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <!-- /page-body -->
+        </main>
+
+        <!-- ═══════════════════════════════════════
+     TOAST
+═══════════════════════════════════════ -->
+        <div id="toastBox"></div>
+
+        <!-- ═══════════════════════════════════════
+     MODAL: SITUS
+═══════════════════════════════════════ -->
+        <div class="modal-backdrop" id="m-site">
+            <div class="modal-box wide">
+                <div class="modal-head">
+                    <h3 id="m-site-title">Tambah Situs Baru</h3>
+                    <button class="modal-close" onclick="closeSiteModal()">
+                        X
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label"
+                                >ID Situs
+                                <span style="color: var(--red)">*</span></label
+                            >
+                            <input
+                                type="text"
+                                id="f-siteId"
+                                class="form-ctrl"
+                                placeholder="cth: S11"
+                            />
+                            <p class="form-hint">
+                                Huruf kapital + angka, unik, tidak bisa diubah
+                                setelah disimpan.
+                            </p>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label"
+                                >Nama Situs
+                                <span style="color: var(--red)">*</span></label
+                            >
+                            <input
+                                type="text"
+                                id="f-siteName"
+                                class="form-ctrl"
+                                placeholder="Nama lengkap situs bersejarah"
+                            />
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label">Era / Periode</label>
+                            <input
+                                type="text"
+                                id="f-siteEra"
+                                class="form-ctrl"
+                                placeholder="cth: Kolonial Belanda (1906)"
+                            />
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Status / Kategori</label>
+                            <select id="f-siteStatus" class="form-ctrl">
+                                <option value="">— Pilih Status —</option>
+                                <option>Cagar Budaya</option>
+                                <option>Museum</option>
+                                <option>Bangunan Bersejarah</option>
+                                <option>Infrastruktur Bersejarah</option>
+                                <option>Tempat Ibadah Bersejarah</option>
+                                <option>Taman Bersejarah</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">URL Foto</label>
+                        <input
+                            type="text"
+                            id="f-siteImg"
+                            class="form-ctrl"
+                            placeholder="https://..."
+                        />
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Deskripsi</label>
+                        <textarea
+                            id="f-siteDesc"
+                            class="form-ctrl"
+                            placeholder="Tulis deskripsi lengkap situs ini…"
+                        ></textarea>
+                    </div>
+
+                    <div class="section-divider">Lokasi di Peta</div>
+                    <p class="form-hint" style="margin-bottom: 8px">
+                        Klik pada peta untuk menentukan koordinat, atau ketik
+                        koordinat secara manual.
+                    </p>
+                    <div id="adminSiteMap"></div>
+                    <div class="coord-row">
+                        <div class="form-group" style="margin: 0">
+                            <label class="form-label">Latitude</label>
+                            <input
+                                type="text"
+                                id="f-siteLat"
+                                class="form-ctrl"
+                                placeholder="3.5833"
+                            />
+                        </div>
+                        <div class="form-group" style="margin: 0">
+                            <label class="form-label">Longitude</label>
+                            <input
+                                type="text"
+                                id="f-siteLng"
+                                class="form-ctrl"
+                                placeholder="98.6833"
+                            />
+                        </div>
+                        <button
+                            class="btn btn-ghost btn-sm"
+                            onclick="useGPS()"
+                            style="align-self: flex-end"
+                        >
+                            GPS Saya
+                        </button>
+                    </div>
+
+                    <div class="section-divider">Kuis Situs</div>
+                    <div class="form-group">
+                        <label class="form-label">Pertanyaan Kuis</label>
+                        <input
+                            type="text"
+                            id="f-quizQ"
+                            class="form-ctrl"
+                            placeholder="Tulis pertanyaan kuis tentang situs ini…"
+                        />
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label">Pilihan A</label>
+                            <input
+                                type="text"
+                                id="f-quizA"
+                                class="form-ctrl"
+                                placeholder="Jawaban opsi A"
+                            />
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Pilihan B</label>
+                            <input
+                                type="text"
+                                id="f-quizB"
+                                class="form-ctrl"
+                                placeholder="Jawaban opsi B"
+                            />
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label">Pilihan C</label>
+                            <input
+                                type="text"
+                                id="f-quizC"
+                                class="form-ctrl"
+                                placeholder="Jawaban opsi C"
+                            />
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Pilihan D</label>
+                            <input
+                                type="text"
+                                id="f-quizD"
+                                class="form-ctrl"
+                                placeholder="Jawaban opsi D"
+                            />
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Jawaban Benar</label>
+                        <select id="f-quizCorrect" class="form-ctrl">
+                            <option value="A">A</option>
+                            <option value="B">B</option>
+                            <option value="C">C</option>
+                            <option value="D">D</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-foot">
+                    <button class="btn btn-ghost" onclick="closeSiteModal()">
+                        Batal
+                    </button>
+                    <button class="btn btn-primary" onclick="saveSite()">
+                        Simpan Situs
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- ═══════════════════════════════════════
+     MODAL: TRAIL
+═══════════════════════════════════════ -->
+        <div class="modal-backdrop" id="m-trail">
+            <div class="modal-box">
+                <div class="modal-head">
+                    <h3 id="m-trail-title">Tambah Trail Baru</h3>
+                    <button class="modal-close" onclick="closeTrailModal()">
+                        X
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label"
+                                >ID Trail
+                                <span style="color: var(--red)">*</span></label
+                            >
+                            <input
+                                type="text"
+                                id="f-trailId"
+                                class="form-ctrl"
+                                placeholder="cth: T09"
+                            />
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label"
+                                >Nama Trail
+                                <span style="color: var(--red)">*</span></label
+                            >
+                            <input
+                                type="text"
+                                id="f-trailName"
+                                class="form-ctrl"
+                                placeholder="cth: Jejak Kolonial Baru"
+                            />
+                        </div>
+                    </div>
+                    <div class="section-divider">Pilih &amp; Urutkan Situs</div>
+                    <p class="form-hint" style="margin-bottom: 8px">
+                        Centang situs yang masuk trail, lalu gunakan ↑↓ untuk
+                        mengatur urutan kunjungan.
+                    </p>
+                    <div class="checklist" id="trail-checklist">
+                        <div style="padding: 16px; color: var(--text-light)">
+                            <span class="spinner"></span> Memuat situs…
+                        </div>
+                    </div>
+                    <div class="form-group" style="margin-top: 12px">
+                        <label class="form-label">Preview Urutan Rute</label>
+                        <div class="route-preview" id="route-preview">
+                            Belum ada situs yang dipilih.
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-foot">
+                    <button class="btn btn-ghost" onclick="closeTrailModal()">
+                        Batal
+                    </button>
+                    <button class="btn btn-primary" onclick="saveTrail()">
+                        Simpan Trail
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- ═══════════════════════════════════════
+     MODAL: BADGE
+═══════════════════════════════════════ -->
+        <div class="modal-backdrop" id="m-badge">
+            <div class="modal-box">
+                <div class="modal-head">
+                    <h3 id="m-badge-title">Tambah Badge Baru</h3>
+                    <button class="modal-close" onclick="closeBadgeModal()">
+                        X
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label"
+                                >ID Badge
+                                <span style="color: var(--red)">*</span></label
+                            >
+                            <input
+                                type="text"
+                                id="f-badgeId"
+                                class="form-ctrl"
+                                placeholder="cth: B09"
+                            />
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label"
+                                >Nama Badge
+                                <span style="color: var(--red)">*</span></label
+                            >
+                            <input
+                                type="text"
+                                id="f-badgeName"
+                                class="form-ctrl"
+                                placeholder="cth: Penjelajah Kolonial"
+                            />
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Jenis Syarat <span style="color: var(--red)">*</span></label>
+                        <select id="f-badgeConditionType" class="form-ctrl" onchange="onBadgeConditionChange()">
+                            <option value="TRAIL">Menyelesaikan Trail</option>
+                            <option value="CATEGORY">Mengunjungi Situs Khusus (per Kategori)</option>
+                            <option value="CUSTOM">Kondisi Tertentu</option>
+                        </select>
+                    </div>
+
+                    <!-- TRAIL condition fields -->
+                    <div id="badge-cond-trail" class="form-group">
+                        <label class="form-label">Trail Terkait</label>
+                        <select id="f-badgeTrail" class="form-ctrl">
+                            <option value="">— Pilih Trail —</option>
+                        </select>
+                        <p class="form-hint">Badge diberikan saat user menyelesaikan semua situs pada trail ini.</p>
+                    </div>
+
+                    <!-- CATEGORY condition fields -->
+                    <div id="badge-cond-category" class="form-group" style="display:none">
+                        <label class="form-label">Kategori Situs</label>
+                        <select id="f-badgeCategory" class="form-ctrl">
+                            <option value="">— Pilih Kategori —</option>
+                            <option value="Cagar Budaya">Cagar Budaya</option>
+                            <option value="Museum">Museum</option>
+                            <option value="Bangunan Bersejarah">Bangunan Bersejarah</option>
+                            <option value="Infrastruktur Bersejarah">Infrastruktur Bersejarah</option>
+                            <option value="Tempat Ibadah Bersejarah">Tempat Ibadah Bersejarah</option>
+                            <option value="Taman Bersejarah">Taman Bersejarah</option>
+                        </select>
+                        <p class="form-hint">Badge diberikan saat user mengunjungi semua situs dalam kategori ini.</p>
+                    </div>
+
+                    <!-- CUSTOM condition fields -->
+                    <div id="badge-cond-custom" style="display:none">
+                        <div class="section-divider">Kondisi Kunjungan</div>
+                        <div class="form-row three">
+                            <div class="form-group">
+                                <label class="form-label">Jumlah Situs</label>
+                                <input type="number" id="f-badgeRequiredVisits" class="form-ctrl" placeholder="cth: 5" min="1" />
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Dalam Waktu</label>
+                                <input type="number" id="f-badgeTimePeriodValue" class="form-ctrl" placeholder="cth: 1" min="1" />
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Satuan Waktu</label>
+                                <select id="f-badgeTimePeriodUnit" class="form-ctrl">
+                                    <option value="JAM">Jam</option>
+                                    <option value="HARI">Hari</option>
+                                    <option value="BULAN">Bulan</option>
+                                </select>
+                            </div>
+                        </div>
+                        <p class="form-hint">Badge diberikan saat user mengunjungi minimal sejumlah situs tertentu. Contoh: Mengunjungi 5 situs dalam 1 hari.</p>
+                    </div>
+
+                    <div class="form-group" style="margin-top:16px">
+                        <label class="form-label">Deskripsi</label>
+                        <input
+                            type="text"
+                            id="f-badgeDesc"
+                            class="form-ctrl"
+                            placeholder="cth: Menyelesaikan Trail Jejak Kolonial"
+                        />
+                    </div>
+                </div>
+                <div class="modal-foot">
+                    <button class="btn btn-ghost" onclick="closeBadgeModal()">
+                        Batal
+                    </button>
+                    <button class="btn btn-primary" onclick="saveBadge()">
+                        Simpan Badge
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- ═══════════════════════════════════════
+     SCRIPTS
+═══════════════════════════════════════ -->
+        <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+        <script>
+            var allSites = [];
+            var allTrails = [];
+            var allBadges = [];
+            var editingSiteId = null;
+            var editingTrailId = null;
+            var editingBadgeId = null;
+            var siteMap = null;
+            var siteMarker = null;
+
+            function adminFetch(url, options) {
+                options = options || {};
+                options.credentials = "include";
+                return fetch(url, options).then(function (r) {
+                    if (r.status === 403) {
+                        return r.json().then(function (body) {
+                            throw new Error(body.message || "Akses ditolak.");
+                        });
+                    }
+                    if (!r.ok) {
+                        throw new Error("HTTP " + r.status);
+                    }
+                    return r.json();
+                });
+            }
+
+            document.addEventListener("DOMContentLoaded", function () {
+                adminFetch("/api/admin/check")
+                    .then(function (d) {
+                        if (!d.isAdmin) {
+                            window.location.href = "/index.html";
+                            return;
+                        }
+                        var n = d.username || "Admin";
+                        document.getElementById("adminName").textContent = n;
+                        document.getElementById("adminAvatar").textContent = n.charAt(0).toUpperCase();
+                        loadDashboard();
+                    })
+                    .catch(function () {
+                        window.location.href = "/index.html";
+                    });
+            });
+
+            function nav(sec) {
+                var sections = ["dashboard", "sites", "trails", "badges", "users"];
+                for (var i = 0; i < sections.length; i++) {
+                    var el = document.getElementById("sec-" + sections[i]);
+                    if (el) {
+                        if (sections[i] === sec) {
+                            el.classList.remove("hidden");
+                        } else {
+                            el.classList.add("hidden");
+                        }
+                    }
+                }
+                var links = document.querySelectorAll(".sidebar-menu a");
+                for (var j = 0; j < links.length; j++) {
+                    if (links[j].getAttribute("data-sec") === sec) {
+                        links[j].classList.add("active");
+                    } else {
+                        links[j].classList.remove("active");
+                    }
+                }
+                if (sec === "dashboard") loadDashboard();
+                if (sec === "sites") loadSites();
+                if (sec === "trails") loadTrails();
+                if (sec === "badges") loadBadges();
+                if (sec === "users") loadUsers();
+                window.scrollTo(0, 0);
+            }
+
+            function toast(title, msg, type) {
+                type = type || "info";
+                var el = document.createElement("div");
+                el.className = "toast " + type;
+                el.innerHTML = '<div class="toast-msg"><strong>' + esc(title) + "</strong><span>" + esc(msg) + "</span></div>";
+                document.getElementById("toastBox").appendChild(el);
+                setTimeout(function () {
+                    el.style.transition = "opacity .3s";
+                    el.style.opacity = "0";
+                    setTimeout(function () { el.remove(); }, 300);
+                }, 3500);
+            }
+
+            function esc(s) {
+                return String(s == null ? "" : s)
+                    .replace(/&/g, "&amp;")
+                    .replace(/</g, "&lt;")
+                    .replace(/>/g, "&gt;")
+                    .replace(/"/g, "&quot;");
+            }
+
+            function emptyRow(cols, msg) {
+                return '<tr><td colspan="' + cols + '"><div class="empty"><div class="empty-ico"></div><p>' + esc(msg) + "</p></div></td></tr>";
+            }
+
+            function loadDashboard() {
+                Promise.all([
+                    adminFetch("/api/admin/sites").catch(function () { return []; }),
+                    adminFetch("/api/admin/trails").catch(function () { return []; }),
+                    adminFetch("/api/admin/badges").catch(function () { return []; }),
+                    adminFetch("/api/admin/users").catch(function () { return []; })
+                ]).then(function (results) {
+                    allSites = Array.isArray(results[0]) ? results[0] : [];
+                    allTrails = Array.isArray(results[1]) ? results[1] : [];
+                    var badges = Array.isArray(results[2]) ? results[2] : [];
+                    var users = Array.isArray(results[3]) ? results[3] : [];
+                    document.getElementById("ds-sites").textContent = allSites.length;
+                    document.getElementById("ds-trails").textContent = allTrails.length;
+                    document.getElementById("ds-badges").textContent = badges.length;
+                    document.getElementById("ds-users").textContent = users.length;
+                }).catch(function () {
+                    toast("Gagal", "Tidak dapat memuat data dashboard.", "error");
+                });
+            }
+
+            function goToApp() {
+                window.location.href = "/index.html";
+            }
+
+            function doLogout() {
+                fetch("/api/auth/logout", { method: "POST", credentials: "include" })
+                    .finally(function () { window.location.href = "/index.html"; });
+            }
+
+                        /* ══════════════════════════════════════
+               KELOLA SITUS
+            ══════════════════════════════════════ */
+            function loadSites() {
+                var tb = document.getElementById("tb-sites");
+                tb.innerHTML = '<tr class="spinner-row"><td colspan="6"><span class="spinner"></span>Memuat...</td></tr>';
+                adminFetch("/api/admin/sites")
+                    .then(function (data) {
+                        allSites = Array.isArray(data) ? data : [];
+                        if (!allSites.length) {
+                            tb.innerHTML = emptyRow(6, "Belum ada situs.");
+                            return;
+                        }
+                        var html = "";
+                        for (var i = 0; i < allSites.length; i++) {
+                            var s = allSites[i];
+                            var coordText = (s.latitude != null ? s.latitude.toFixed(4) : "-") + ", " + (s.longitude != null ? s.longitude.toFixed(4) : "-");
+                            html += "<tr>";
+                            html += "<td><code>" + esc(s.id) + "</code></td>";
+                            html += "<td><strong>" + esc(s.name) + "</strong></td>";
+                            html += '<td style="color:var(--text-mid)">' + esc(s.era || "-") + "</td>";
+                            html += "<td>" + statusPill(s.status) + "</td>";
+                            html += '<td style="font-size:12px;color:var(--text-light);font-family:monospace">' + coordText + "</td>";
+                            html += '<td><div class="actions">';
+                            html += '<button class="btn btn-yellow btn-xs" onclick="openSiteModal(\'' + esc(s.id) + '\')">Edit</button>';
+                            html += '<button class="btn btn-danger btn-xs" onclick="delSite(\'' + esc(s.id) + '\')">Hapus</button>';
+                            html += "</div></td>";
+                            html += "</tr>";
+                        }
+                        tb.innerHTML = html;
+                    })
+                    .catch(function (err) {
+                        tb.innerHTML = emptyRow(6, "Gagal memuat data situs.");
+                        toast("Gagal", err.message || "Tidak dapat memuat situs.", "error");
+                    });
+            }
+
+            function statusPill(st) {
+                var m = {
+                    "Cagar Budaya": "pill-teal",
+                    "Museum": "pill-yellow",
+                    "Taman Bersejarah": "pill-green",
+                    "Tempat Ibadah Bersejarah": "pill-green"
+                };
+                return '<span class="pill ' + (m[st] || "pill-gray") + '">' + esc(st || "-") + "</span>";
+            }
+
+            function openSiteModal(siteId) {
+                var s = null;
+                if (siteId) {
+                    for (var i = 0; i < allSites.length; i++) {
+                        if (allSites[i].id === siteId) { s = allSites[i]; break; }
+                    }
+                }
+                editingSiteId = s ? s.id : null;
+                document.getElementById("m-site-title").textContent = s ? "Edit Situs - " + s.id : "Tambah Situs Baru";
+                document.getElementById("f-siteId").value = s ? s.id : "";
+                document.getElementById("f-siteId").disabled = !!s;
+                document.getElementById("f-siteName").value = s ? s.name : "";
+                document.getElementById("f-siteEra").value = s ? (s.era || "") : "";
+                document.getElementById("f-siteStatus").value = s ? (s.status || "") : "";
+                document.getElementById("f-siteImg").value = s ? (s.imageUrl || "") : "";
+                var descText = s ? (s.description || "") : "";
+                descText = descText.replace(/<br\s*\/?>/gi, "\n");
+                descText = descText.replace(/<\/?strong>/gi, "");
+                document.getElementById("f-siteDesc").value = descText;
+                document.getElementById("f-siteLat").value = (s && s.latitude != null) ? s.latitude : "";
+                document.getElementById("f-siteLng").value = (s && s.longitude != null) ? s.longitude : "";
+                var q = (s && s.quiz) ? s.quiz : {};
+                document.getElementById("f-quizQ").value = q.questionText || "";
+                document.getElementById("f-quizA").value = q.optionA || "";
+                document.getElementById("f-quizB").value = q.optionB || "";
+                document.getElementById("f-quizC").value = q.optionC || "";
+                document.getElementById("f-quizD").value = q.optionD || "";
+                document.getElementById("f-quizCorrect").value = q.correctOption || "A";
+                document.getElementById("m-site").classList.add("open");
+                setTimeout(function () { initSiteMap(s); }, 180);
+            }
+
+            function initSiteMap(s) {
+                if (siteMap) {
+                    siteMap.remove();
+                    siteMap = null;
+                    siteMarker = null;
+                }
+                var lat = (s && s.latitude != null) ? s.latitude : 3.5833;
+                var lng = (s && s.longitude != null) ? s.longitude : 98.6833;
+                siteMap = L.map("adminSiteMap").setView([lat, lng], 15);
+                L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+                    attribution: "OpenStreetMap",
+                    maxZoom: 19
+                }).addTo(siteMap);
+                if (s && s.latitude != null) {
+                    siteMarker = L.marker([lat, lng]).addTo(siteMap);
+                }
+                siteMap.on("click", function (e) {
+                    document.getElementById("f-siteLat").value = e.latlng.lat.toFixed(7);
+                    document.getElementById("f-siteLng").value = e.latlng.lng.toFixed(7);
+                    if (siteMarker) siteMarker.setLatLng(e.latlng);
+                    else siteMarker = L.marker(e.latlng).addTo(siteMap);
+                });
+                var coordIds = ["f-siteLat", "f-siteLng"];
+                for (var ci = 0; ci < coordIds.length; ci++) {
+                    var coordEl = document.getElementById(coordIds[ci]);
+                    coordEl.removeAttribute("readonly");
+                    coordEl.addEventListener("input", function () {
+                        var la = parseFloat(document.getElementById("f-siteLat").value);
+                        var ln = parseFloat(document.getElementById("f-siteLng").value);
+                        if (!isNaN(la) && !isNaN(ln)) {
+                            var ll = [la, ln];
+                            siteMap.setView(ll, siteMap.getZoom());
+                            if (siteMarker) siteMarker.setLatLng(ll);
+                            else siteMarker = L.marker(ll).addTo(siteMap);
+                        }
+                    });
+                }
+            }
+
+            function useGPS() {
+                if (!navigator.geolocation) {
+                    toast("GPS", "Browser tidak mendukung geolokasi.", "error");
+                    return;
+                }
+                navigator.geolocation.getCurrentPosition(
+                    function (pos) {
+                        var la = pos.coords.latitude;
+                        var ln = pos.coords.longitude;
+                        document.getElementById("f-siteLat").value = la.toFixed(7);
+                        document.getElementById("f-siteLng").value = ln.toFixed(7);
+                        siteMap.setView([la, ln], 17);
+                        if (siteMarker) siteMarker.setLatLng([la, ln]);
+                        else siteMarker = L.marker([la, ln]).addTo(siteMap);
+                        toast("GPS", "Koordinat berhasil diambil.", "success");
+                    },
+                    function (e) {
+                        toast("GPS Error", e.message, "error");
+                    }
+                );
+            }
+
+            function closeSiteModal() {
+                document.getElementById("m-site").classList.remove("open");
+                if (siteMap) {
+                    siteMap.remove();
+                    siteMap = null;
+                    siteMarker = null;
+                }
+                editingSiteId = null;
+            }
+
+
+            function saveSite() {
+                var id = document.getElementById("f-siteId").value.trim();
+                var name = document.getElementById("f-siteName").value.trim();
+                if (!id || !name) {
+                    toast("Validasi", "ID dan Nama Situs wajib diisi.", "error");
+                    return;
+                }
+                var latV = document.getElementById("f-siteLat").value.trim();
+                var lngV = document.getElementById("f-siteLng").value.trim();
+                var quizQ = document.getElementById("f-quizQ").value.trim();
+                var payload = {
+                    id: id,
+                    name: name,
+                    era: document.getElementById("f-siteEra").value.trim(),
+                    status: document.getElementById("f-siteStatus").value,
+                    imageUrl: document.getElementById("f-siteImg").value.trim(),
+                    description: (function () {
+                        var rawVal = document.getElementById("f-siteDesc").value.trim();
+                        var lines = rawVal.split("\n");
+                        for (var li = 0; li < lines.length; li++) {
+                            var line = lines[li].trim();
+                            if (line.endsWith(":") && line.length < 50) {
+                                lines[li] = "<strong>" + line + "</strong>";
+                            }
+                        }
+                        return lines.join("<br>");
+                    })(),
+                    latitude: latV ? parseFloat(latV) : null,
+                    longitude: lngV ? parseFloat(lngV) : null,
+                    quiz: quizQ ? {
+                        questionText: quizQ,
+                        optionA: document.getElementById("f-quizA").value.trim(),
+                        optionB: document.getElementById("f-quizB").value.trim(),
+                        optionC: document.getElementById("f-quizC").value.trim(),
+                        optionD: document.getElementById("f-quizD").value.trim(),
+                        correctOption: document.getElementById("f-quizCorrect").value
+                    } : null
+                };
+                var isEdit = editingSiteId !== null;
+                var url = isEdit ? "/api/admin/sites/" + editingSiteId : "/api/admin/sites";
+                fetch(url, {
+                    method: isEdit ? "PUT" : "POST",
+                    credentials: "include",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify(payload)
+                })
+                .then(function (r) {
+                    if (!r.ok) return r.text().then(function (t) { throw new Error(t); });
+                    return r.json();
+                })
+                .then(function (d) {
+                    toast("Berhasil", d.message || (isEdit ? "Situs diperbarui." : "Situs ditambahkan."), "success");
+                    closeSiteModal();
+                    loadSites();
+                    loadDashboard();
+                })
+                .catch(function (e) {
+                    toast("Error", e.message, "error");
+                });
+            }
+
+            function delSite(id) {
+                if (["S01", "S02", "S09"].indexOf(id) >= 0) {
+                    toast("Ditolak", "Situs bawaan sistem tidak dapat dihapus.", "error");
+                    return;
+                }
+                if (!confirm('Hapus situs "' + id + '"? Tindakan ini tidak dapat dibatalkan.')) return;
+                fetch("/api/admin/sites/" + id, { method: "DELETE", credentials: "include" })
+                    .then(function (r) {
+                        if (!r.ok) throw new Error("Gagal menghapus");
+                        toast("Dihapus", "Situs " + id + " berhasil dihapus.", "success");
+                        loadSites();
+                        loadDashboard();
+                    })
+                    .catch(function (e) {
+                        toast("Error", e.message, "error");
+                    });
+            }
+
+            function loadTrails() {
+                var tb = document.getElementById("tb-trails");
+                tb.innerHTML = '<tr class="spinner-row"><td colspan="5"><span class="spinner"></span>Memuat...</td></tr>';
+                Promise.all([
+                    adminFetch("/api/admin/trails").catch(function () { return []; }),
+                    adminFetch("/api/admin/sites").catch(function () { return []; })
+                ]).then(function (results) {
+                    allTrails = Array.isArray(results[0]) ? results[0] : [];
+                    allSites = Array.isArray(results[1]) ? results[1] : [];
+                    if (!allTrails.length) {
+                        tb.innerHTML = emptyRow(5, "Belum ada trail.");
+                        return;
+                    }
+                    var html = "";
+                    for (var i = 0; i < allTrails.length; i++) {
+                        var t = allTrails[i];
+                        var ids = t.siteIds || [];
+                        var namesHtml = "";
+                        for (var k = 0; k < ids.length; k++) {
+                            var found = null;
+                            for (var f = 0; f < allSites.length; f++) {
+                                if (allSites[f].id === ids[k]) { found = allSites[f]; break; }
+                            }
+                            if (k > 0) namesHtml += ' <span style="color:var(--yellow);font-weight:700">-></span> ';
+                            namesHtml += '<span style="white-space:nowrap"><span class="pill pill-gray" style="font-size:10px">' + (k + 1) + '</span> ' + esc(found ? found.name : ids[k]) + '</span>';
+                        }
+                        if (!namesHtml) namesHtml = '<span style="color:var(--text-light)">-</span>';
+                        html += "<tr>";
+                        html += "<td><code>" + esc(t.id) + "</code></td>";
+                        html += "<td><strong>" + esc(t.name) + "</strong></td>";
+                        html += '<td style="text-align:center"><span class="pill pill-teal">' + ids.length + "</span></td>";
+                        html += '<td style="font-size:12.5px;line-height:1.8">' + namesHtml + "</td>";
+                        html += '<td><div class="actions">';
+                        html += '<button class="btn btn-yellow btn-xs" onclick="openTrailModal(\'' + esc(t.id) + '\')">Edit</button>';
+                        html += '<button class="btn btn-danger btn-xs" onclick="delTrail(\'' + esc(t.id) + '\')">Hapus</button>';
+                        html += "</div></td>";
+                        html += "</tr>";
+                    }
+                    tb.innerHTML = html;
+                }).catch(function (err) {
+                    tb.innerHTML = emptyRow(5, "Gagal memuat data trail.");
+                    toast("Gagal", err.message || "Tidak dapat memuat trail.", "error");
+                });
+            }
+
+            function openTrailModal(trailId) {
+                var t = null;
+                if (trailId) {
+                    for (var i = 0; i < allTrails.length; i++) {
+                        if (allTrails[i].id === trailId) { t = allTrails[i]; break; }
+                    }
+                }
+                editingTrailId = t ? t.id : null;
+                document.getElementById("m-trail-title").textContent = t ? "Edit Trail - " + t.id : "Tambah Trail Baru";
+                document.getElementById("f-trailId").value = t ? t.id : "";
+                document.getElementById("f-trailId").disabled = !!t;
+                document.getElementById("f-trailName").value = t ? t.name : "";
+                document.getElementById("m-trail").classList.add("open");
+                var ready = allSites.length > 0
+                    ? Promise.resolve(allSites)
+                    : adminFetch("/api/admin/sites").then(function (d) { allSites = Array.isArray(d) ? d : []; return allSites; });
+                ready.then(function () {
+                    buildChecklist(t ? (t.siteIds || []) : []);
+                });
+            }
+
+            function buildChecklist(selectedIds) {
+                var box = document.getElementById("trail-checklist");
+                if (!allSites.length) {
+                    box.innerHTML = '<div style="padding:16px;color:var(--text-light)">Tidak ada situs tersedia.</div>';
+                    return;
+                }
+                var sel = [];
+                for (var si = 0; si < selectedIds.length; si++) {
+                    for (var sj = 0; sj < allSites.length; sj++) {
+                        if (allSites[sj].id === selectedIds[si]) { sel.push(allSites[sj]); break; }
+                    }
+                }
+                var unsel = [];
+                for (var ui = 0; ui < allSites.length; ui++) {
+                    var isSelected = false;
+                    for (var uj = 0; uj < selectedIds.length; uj++) {
+                        if (allSites[ui].id === selectedIds[uj]) { isSelected = true; break; }
+                    }
+                    if (!isSelected) unsel.push(allSites[ui]);
+                }
+                var ordered = sel.concat(unsel);
+                var html = "";
+                for (var oi = 0; oi < ordered.length; oi++) {
+                    var s = ordered[oi];
+                    var checked = false;
+                    for (var ci = 0; ci < selectedIds.length; ci++) {
+                        if (selectedIds[ci] === s.id) { checked = true; break; }
+                    }
+                    html += '<div class="checklist-item" data-sid="' + esc(s.id) + '">';
+                    html += '<input type="checkbox" id="chk-' + esc(s.id) + '" ' + (checked ? 'checked' : '') + ' onchange="updatePreview()">';
+                    html += '<label for="chk-' + esc(s.id) + '">' + esc(s.name) + ' <small style="color:var(--text-light)">(' + esc(s.id) + ')</small></label>';
+                    html += '<button class="order-btn" onclick="moveItem(\'' + esc(s.id) + '\',-1)" title="Naik">UP</button>';
+                    html += '<button class="order-btn" onclick="moveItem(\'' + esc(s.id) + '\',1)" title="Turun">DN</button>';
+                    html += "</div>";
+                }
+                box.innerHTML = html;
+                updatePreview();
+            }
+
+            function moveItem(sid, dir) {
+                var box = document.getElementById("trail-checklist");
+                var items = [];
+                var children = box.querySelectorAll(".checklist-item");
+                for (var mi = 0; mi < children.length; mi++) items.push(children[mi]);
+                var idx = -1;
+                for (var fi = 0; fi < items.length; fi++) {
+                    if (items[fi].getAttribute("data-sid") === sid) { idx = fi; break; }
+                }
+                if (idx < 0) return;
+                var ni = idx + dir;
+                if (ni < 0 || ni >= items.length) return;
+                if (dir === -1) box.insertBefore(items[idx], items[ni]);
+                else box.insertBefore(items[ni], items[idx]);
+                updatePreview();
+            }
+
+            function updatePreview() {
+                var box = document.getElementById("trail-checklist");
+                var prev = document.getElementById("route-preview");
+                var items = box.querySelectorAll(".checklist-item");
+                var sel = [];
+                for (var pi = 0; pi < items.length; pi++) {
+                    if (items[pi].querySelector("input").checked) sel.push(items[pi]);
+                }
+                if (!sel.length) {
+                    prev.textContent = "Belum ada situs yang dipilih.";
+                    return;
+                }
+                var previewHtml = "";
+                for (var ri = 0; ri < sel.length; ri++) {
+                    var sid = sel[ri].getAttribute("data-sid");
+                    var found = null;
+                    for (var rj = 0; rj < allSites.length; rj++) {
+                        if (allSites[rj].id === sid) { found = allSites[rj]; break; }
+                    }
+                    var siteName = found ? found.name : sid;
+                    previewHtml += '<span class="pill pill-gray" style="font-size:10px">' + (ri + 1) + '</span> ' + esc(siteName);
+                    if (ri < sel.length - 1) previewHtml += ' <span style="color:var(--yellow);font-weight:700">-></span> ';
+                }
+                prev.innerHTML = previewHtml;
+            }
+
+            function closeTrailModal() {
+                document.getElementById("m-trail").classList.remove("open");
+                editingTrailId = null;
+            }
+
+            function saveTrail() {
+                var id = document.getElementById("f-trailId").value.trim();
+                var name = document.getElementById("f-trailName").value.trim();
+                if (!id || !name) {
+                    toast("Validasi", "ID dan Nama Trail wajib diisi.", "error");
+                    return;
+                }
+                var checkItems = document.getElementById("trail-checklist").querySelectorAll(".checklist-item");
+                var siteIds = [];
+                for (var ti = 0; ti < checkItems.length; ti++) {
+                    if (checkItems[ti].querySelector("input").checked) {
+                        siteIds.push(checkItems[ti].getAttribute("data-sid"));
+                    }
+                }
+                var isEdit = editingTrailId !== null;
+                var url = isEdit ? "/api/admin/trails/" + editingTrailId : "/api/admin/trails";
+                fetch(url, {
+                    method: isEdit ? "PUT" : "POST",
+                    credentials: "include",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ id: id, name: name, siteIds: siteIds })
+                })
+                .then(function (r) {
+                    if (!r.ok) return r.text().then(function (t) { throw new Error(t); });
+                    return r.json();
+                })
+                .then(function (d) {
+                    toast("Berhasil", d.message || "Trail disimpan.", "success");
+                    closeTrailModal();
+                    loadTrails();
+                    loadDashboard();
+                })
+                .catch(function (e) {
+                    toast("Error", e.message, "error");
+                });
+            }
+
+            function delTrail(id) {
+                if (!confirm('Hapus trail "' + id + '"? Badge terkait mungkin terpengaruh.')) return;
+                fetch("/api/admin/trails/" + id, { method: "DELETE", credentials: "include" })
+                    .then(function (r) {
+                        if (!r.ok) throw new Error("Gagal");
+                        toast("Dihapus", "Trail dihapus.", "success");
+                        loadTrails();
+                        loadDashboard();
+                    })
+                    .catch(function (e) {
+                        toast("Error", e.message, "error");
+                    });
+            }
+
+            function loadBadges() {
+                var tb = document.getElementById("tb-badges");
+                tb.innerHTML = '<tr class="spinner-row"><td colspan="5"><span class="spinner"></span>Memuat...</td></tr>';
+                Promise.all([
+                    adminFetch("/api/admin/badges").catch(function () { return []; }),
+                    adminFetch("/api/admin/trails").catch(function () { return []; })
+                ]).then(function (res) {
+                    var badges = Array.isArray(res[0]) ? res[0] : [];
+                    allBadges = badges;
+                    allTrails = Array.isArray(res[1]) ? res[1] : [];
+                    if (!badges.length) {
+                        tb.innerHTML = emptyRow(5, "Belum ada badge.");
+                        return;
+                    }
+                    var html = "";
+                    for (var i = 0; i < badges.length; i++) {
+                        var b = badges[i];
+                        var condType = b.conditionType || "TRAIL";
+                        var condHtml = "";
+                        if (condType === "TRAIL") {
+                            var trail = null;
+                            for (var j = 0; j < allTrails.length; j++) {
+                                if (allTrails[j].id === b.trailId) { trail = allTrails[j]; break; }
+                            }
+                            condHtml = '<span class="pill pill-teal">Trail</span> ';
+                            condHtml += trail ? esc(trail.name) : '<span style="color:var(--text-light)">-</span>';
+                        } else if (condType === "CATEGORY") {
+                            condHtml = '<span class="pill pill-yellow">Kategori</span> ';
+                            condHtml += b.categoryName ? esc(b.categoryName) : '-';
+                        } else if (condType === "CUSTOM") {
+                            condHtml = '<span class="pill pill-green">Kondisi</span> ';
+                            var rv = b.requiredVisits || '?';
+                            var tv = b.timePeriodValue || '?';
+                            var unitMap = { 'JAM': 'jam', 'HARI': 'hari', 'BULAN': 'bulan' };
+                            var tu = unitMap[b.timePeriodUnit] || '?';
+                            condHtml += esc(rv + ' situs / ' + tv + ' ' + tu);
+                        }
+                        html += "<tr>";
+                        html += "<td><code>" + esc(b.id) + "</code></td>";
+                        html += "<td><strong>" + esc(b.name) + "</strong></td>";
+                        html += '<td style="font-size:12.5px">' + condHtml + "</td>";
+                        html += '<td style="color:var(--text-mid);max-width:240px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + esc(b.description || "-") + "</td>";
+                        html += '<td><div class="actions">';
+                        html += '<button class="btn btn-yellow btn-xs" onclick="openBadgeModal(\'' + esc(b.id) + '\')">Edit</button>';
+                        html += '<button class="btn btn-danger btn-xs" onclick="delBadge(\'' + esc(b.id) + '\')">Hapus</button>';
+                        html += "</div></td>";
+                        html += "</tr>";
+                    }
+                    tb.innerHTML = html;
+                }).catch(function (err) {
+                    tb.innerHTML = emptyRow(5, "Gagal memuat data badge.");
+                    toast("Gagal", err.message || "Tidak dapat memuat badge.", "error");
+                });
+            }
+
+            function onBadgeConditionChange() {
+                var condType = document.getElementById("f-badgeConditionType").value;
+                document.getElementById("badge-cond-trail").style.display = condType === "TRAIL" ? "block" : "none";
+                document.getElementById("badge-cond-category").style.display = condType === "CATEGORY" ? "block" : "none";
+                document.getElementById("badge-cond-custom").style.display = condType === "CUSTOM" ? "block" : "none";
+            }
+
+            function openBadgeModal(badgeId) {
+                var b = null;
+                if (badgeId) {
+                    for (var i = 0; i < allBadges.length; i++) {
+                        if (allBadges[i].id === badgeId) { b = allBadges[i]; break; }
+                    }
+                }
+                editingBadgeId = b ? b.id : null;
+                document.getElementById("m-badge-title").textContent = b ? "Edit Badge - " + b.id : "Tambah Badge Baru";
+                document.getElementById("f-badgeId").value = b ? b.id : "";
+                document.getElementById("f-badgeId").disabled = !!b;
+                document.getElementById("f-badgeName").value = b ? b.name : "";
+                document.getElementById("f-badgeDesc").value = b ? (b.description || "") : "";
+
+                // Set condition type
+                var condType = (b && b.conditionType) ? b.conditionType : "TRAIL";
+                document.getElementById("f-badgeConditionType").value = condType;
+
+                // Set category
+                document.getElementById("f-badgeCategory").value = (b && b.categoryName) ? b.categoryName : "";
+
+                // Set custom fields
+                document.getElementById("f-badgeRequiredVisits").value = (b && b.requiredVisits) ? b.requiredVisits : "";
+                document.getElementById("f-badgeTimePeriodValue").value = (b && b.timePeriodValue) ? b.timePeriodValue : "";
+                document.getElementById("f-badgeTimePeriodUnit").value = (b && b.timePeriodUnit) ? b.timePeriodUnit : "JAM";
+
+                // Show/hide condition sections
+                onBadgeConditionChange();
+
+                // Load trails for trail dropdown
+                var ready = allTrails.length > 0
+                    ? Promise.resolve(allTrails)
+                    : adminFetch("/api/admin/trails").then(function (d) { allTrails = Array.isArray(d) ? d : []; return allTrails; });
+                ready.then(function () {
+                    var sel = document.getElementById("f-badgeTrail");
+                    var optHtml = '<option value="">-- Pilih Trail --</option>';
+                    for (var i = 0; i < allTrails.length; i++) {
+                        var t = allTrails[i];
+                        var selected = (b && b.trailId === t.id) ? " selected" : "";
+                        optHtml += '<option value="' + esc(t.id) + '"' + selected + '>' + esc(t.name) + '</option>';
+                    }
+                    sel.innerHTML = optHtml;
+                });
+                document.getElementById("m-badge").classList.add("open");
+            }
+
+            function closeBadgeModal() {
+                document.getElementById("m-badge").classList.remove("open");
+                editingBadgeId = null;
+            }
+
+            function saveBadge() {
+                var id = document.getElementById("f-badgeId").value.trim();
+                var name = document.getElementById("f-badgeName").value.trim();
+                if (!id || !name) {
+                    toast("Validasi", "ID dan Nama Badge wajib diisi.", "error");
+                    return;
+                }
+                var condType = document.getElementById("f-badgeConditionType").value;
+                var isEdit = editingBadgeId !== null;
+                var payload = {
+                    id: id,
+                    name: name,
+                    conditionType: condType,
+                    trailId: condType === "TRAIL" ? document.getElementById("f-badgeTrail").value : "",
+                    categoryName: condType === "CATEGORY" ? document.getElementById("f-badgeCategory").value : "",
+                    requiredVisits: condType === "CUSTOM" ? (parseInt(document.getElementById("f-badgeRequiredVisits").value) || null) : null,
+                    timePeriodValue: condType === "CUSTOM" ? (parseInt(document.getElementById("f-badgeTimePeriodValue").value) || null) : null,
+                    timePeriodUnit: condType === "CUSTOM" ? document.getElementById("f-badgeTimePeriodUnit").value : "",
+                    description: document.getElementById("f-badgeDesc").value.trim()
+                };
+                var url = isEdit ? "/api/admin/badges/" + editingBadgeId : "/api/admin/badges";
+                fetch(url, {
+                    method: isEdit ? "PUT" : "POST",
+                    credentials: "include",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify(payload)
+                })
+                .then(function (r) {
+                    if (!r.ok) return r.text().then(function (t) { throw new Error(t); });
+                    return r.json();
+                })
+                .then(function (d) {
+                    toast("Berhasil", d.message || "Badge disimpan.", "success");
+                    closeBadgeModal();
+                    loadBadges();
+                    loadDashboard();
+                })
+                .catch(function (e) {
+                    toast("Error", e.message, "error");
+                });
+            }
+
+            function delBadge(id) {
+                if (!confirm('Hapus badge "' + id + '"?')) return;
+                fetch("/api/admin/badges/" + id, { method: "DELETE", credentials: "include" })
+                    .then(function (r) {
+                        if (!r.ok) throw new Error("Gagal");
+                        toast("Dihapus", "Badge dihapus.", "success");
+                        loadBadges();
+                        loadDashboard();
+                    })
+                    .catch(function (e) {
+                        toast("Error", e.message, "error");
+                    });
+            }
+
+            function loadUsers() {
+                var tb = document.getElementById("tb-users");
+                tb.innerHTML = '<tr class="spinner-row"><td colspan="7"><span class="spinner"></span>Memuat...</td></tr>';
+                adminFetch("/api/admin/users")
+                    .then(function (data) {
+                        var users = Array.isArray(data) ? data : [];
+                        if (!users.length) {
+                            tb.innerHTML = emptyRow(7, "Belum ada pengguna.");
+                            return;
+                        }
+                        var html = "";
+                        for (var i = 0; i < users.length; i++) {
+                            var u = users[i];
+                            var isAdmin = u.role === "ADMIN";
+                            html += "<tr>";
+                            html += '<td style="color:var(--text-light);font-size:12px">' + esc(u.id) + "</td>";
+                            html += "<td><strong>" + esc(u.username) + "</strong></td>";
+                            html += '<td style="color:var(--text-mid)">' + esc(u.email || "-") + "</td>";
+                            html += '<td><span class="pill ' + (isAdmin ? "pill-yellow" : "pill-gray") + '">' + (isAdmin ? "Admin" : "User") + "</span></td>";
+                            html += '<td style="text-align:center;font-weight:600">' + esc(u.level || 1) + "</td>";
+                            html += '<td style="text-align:center">' + esc(u.xp || 0) + "</td>";
+                            html += '<td style="text-align:center"><span class="pill pill-teal">' + esc(u.visitedCount || 0) + "</span></td>";
+                            html += "</tr>";
+                        }
+                        tb.innerHTML = html;
+                    })
+                    .catch(function (err) {
+                        tb.innerHTML = emptyRow(7, "Gagal memuat data pengguna.");
+                        toast("Gagal", err.message || "Tidak dapat memuat pengguna.", "error");
+                    });
+            }
+
+            var modalIds = ["m-site", "m-trail", "m-badge"];
+            for (var mi = 0; mi < modalIds.length; mi++) {
+                (function (modalId) {
+                    document.getElementById(modalId).addEventListener("click", function (e) {
+                        if (e.target === this) {
+                            if (modalId === "m-site") closeSiteModal();
+                            else if (modalId === "m-trail") closeTrailModal();
+                            else closeBadgeModal();
+                        }
+                    });
+                })(modalIds[mi]);
+            }
+        </script>
+    </body>
+</html>
